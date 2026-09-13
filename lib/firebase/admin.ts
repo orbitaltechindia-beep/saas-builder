@@ -1,6 +1,5 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
 
 if (!getApps().length) {
   try {
@@ -16,7 +15,5 @@ if (!getApps().length) {
   }
 }
 
-// Safely get instances so the build doesn't crash if env vars are missing
 const app = getApps()[0];
 export const adminDb = app ? getFirestore() : ({} as any);
-export const adminAuth = app ? getAuth() : ({} as any);
