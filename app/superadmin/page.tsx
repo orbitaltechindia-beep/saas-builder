@@ -27,7 +27,7 @@ export default function SuperadminPanel() {
      const approveDomain = async (userId: string, domain: string) => {
     try {
       // 1. Automatically add domain to Vercel
-      const vercelRes = await fetch('/api/provision-domain', {
+      const vercelRes = await fetch('/api/setup-domain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain })
