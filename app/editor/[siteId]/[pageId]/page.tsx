@@ -110,17 +110,20 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       }
     }
   };
-  const handleSave = async () => {
+    const handleSave = async () => {
     setSaveStatus('Saving...');
     try {
-      // Save to Firebase Firestore
+      // 1. Clean the nodes array to remove any undefined values (Firestore doesn't accept undefined)
+      const cleanNodes = JSON.parse(JSON.stringify(nodes));
+      
+      // 2. Save the cleaned data to Firebase Firestore
       await setDoc(doc(db, 'sites', siteId), {
-        pageData: nodes,
+        pageData: cleanNodes,
         updatedAt: new Date()
       }, { merge: true });
       
-      // Also save to localStorage as a quick fallback cache
-      localStorage.setItem(`site_data_${siteId}`, JSON.stringify(nodes));
+      // 3. Also save to localStorage as a quick fallback cache
+      localStorage.setItem(`site_data_${siteId}`, JSON.stringify(cleanNodes));
       
       setSaveStatus('Saved & Live!');
       setTimeout(() => setSaveStatus(''), 3000);
@@ -130,7 +133,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       setTimeout(() => setSaveStatus(''), 3000);
     }
   };
-
   // Prevent SSR rendering for the DnD components
   if (!isMounted) {
     return (
