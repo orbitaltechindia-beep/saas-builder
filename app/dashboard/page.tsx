@@ -12,7 +12,7 @@ interface ClientSite {
   id: string;
   name: string;
   template: string;
-  status: 'live' | 'paused';
+  status: string;
 }
 
 export default function ClientDashboard() {
@@ -43,11 +43,12 @@ export default function ClientDashboard() {
     return () => unsub();
   }, [router]);
 
-  const handleSelectTemplate = async (templateId: string) => {
+    const handleSelectTemplate = async (templateId: string) => {
     const template = TEMPLATES.find(t => t.id === templateId);
     if (!template) return;
     const newSiteId = `site-${Date.now()}`;
-    const newSite = { id: newSiteId, name: `${template.name} Site`, template: templateId, status: 'live' as 'live' | 'paused' };
+    // Removed the strict type cast 'as 'live' | 'paused''
+    const newSite = { id: newSiteId, name: `${template.name} Site`, template: templateId, status: 'live' };
     const updatedSites = [...sites, newSite];
     setSites(updatedSites);
     localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
