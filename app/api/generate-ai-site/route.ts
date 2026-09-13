@@ -20,14 +20,14 @@ export async function POST(req: Request) {
   3. Generate unique string IDs.
   4. Create at least a Hero section, a Features section, and a CTA section.`;
 
-   try {
+  try {
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "Missing GOOGLE_AI_API_KEY environment variable" }, { status: 500 });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
     const result = await model.generateContent([
       { text: systemPrompt },
@@ -52,3 +52,4 @@ export async function POST(req: Request) {
       details: error.message || "Unknown error" 
     }, { status: 500 });
   }
+}
