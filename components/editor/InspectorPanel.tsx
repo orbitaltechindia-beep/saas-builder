@@ -219,13 +219,13 @@ export default function InspectorPanel() {
           </div>
 
           {/* Opacity Slider */}
-          <div>
+                    <div>
             <label className="text-[10px] text-neutral-500 block mb-1">Opacity</label>
             <input 
               type="range" min="0" max="100" 
               className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-              value={currentStyles.opacity ? parseFloat(currentStyles.opacity) * 100 : 100}
-              onChange={(e) => updateComponentProps(selectedNode.id, { styles: { ...currentStyles, opacity: String(parseInt(e.target.value) / 100) } })}
+              value={currentStyles.opacity ? parseFloat(currentStyles.opacity as string) * 100 : 100}
+              onChange={(e) => updateComponentProps(selectedNode.id, { styles: { ...currentStyles, opacity: String((parseInt(e.target.value) / 100).toFixed(2)) } })}
             />
           </div>
 

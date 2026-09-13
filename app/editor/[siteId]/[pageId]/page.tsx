@@ -9,14 +9,13 @@ import EditorCanvas from '@/components/editor/EditorCanvas';
 import InspectorPanel from '@/components/editor/InspectorPanel';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TEMPLATES } from '@/lib/templates';
+import { Node } from '@/types'; // This is the import that was missing!
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
   const resolvedParams = React.use(params);
   const { siteId } = resolvedParams;
 
-  // Fix Hydration Error: Only render DnD Context in the browser
   const [isMounted, setIsMounted] = useState(false);
-  
   const router = useRouter();
   const addComponent = useEditorStore((s) => s.addComponent);
   const setNodes = useEditorStore((s) => s.setNodes);
@@ -31,7 +30,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
 
   useEffect(() => {
     setIsMounted(true);
-    
     const savedData = localStorage.getItem(`site_data_${siteId}`);
     if (savedData) {
       setNodes(JSON.parse(savedData));
@@ -44,7 +42,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     }
   }, [searchParams, siteId, setNodes]);
 
-  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -69,6 +66,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, moveComponent, removeComponent, duplicateComponent]);
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && (over.id === 'canvas-root' || over.id !== active.id)) {
@@ -81,7 +79,9 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         else if (type === 'Image') newNode = { id: uuidv4(), type: 'Image', props: {} };
         else if (type === 'Container') newNode = { id: uuidv4(), type: 'Container', props: {}, children: [] };
         
-        if (newNode) addComponent(newNode);
+        if (newNode) {
+          addComponent(newNode);
+        }
       }
     }
   };
@@ -92,7 +92,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     setTimeout(() => setSaveStatus(''), 2000);
   };
 
-  // Prevent SSR rendering for the DnD components
   if (!isMounted) {
     return (
       <div className="flex flex-col h-screen justify-center items-center bg-neutral-900 text-white">
