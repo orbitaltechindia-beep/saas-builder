@@ -9,7 +9,64 @@ export interface Template {
 }
 
 export const TEMPLATES: Template[] = [
-
+  {
+    id: 'saas-enterprise',
+    name: 'SaaS Enterprise Pro',
+    description: 'Massive, long-form premium SaaS landing page.',
+    thumbnail: 'bg-gradient-to-br from-gray-900 to-indigo-900',
+    pageData: [
+      // NAVBAR
+      {
+        id: 'nav', type: 'Container', props: { styles: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 5rem', backgroundColor: '#000000', position: 'sticky', top: '0', zIndex: '100' } },
+        children: [
+          { id: 'logo', type: 'Text', props: { text: 'NexusAI', styles: { color: 'white', fontSize: '1.5rem', fontWeight: '800' } } },
+          { id: 'nav-cta', type: 'Button', props: { text: 'Book a Demo', styles: { backgroundColor: '#6366f1', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600' } } }
+        ]
+      },
+      // HERO
+      {
+        id: 'hero', type: 'Container', props: { styles: { padding: '10rem 5rem', backgroundColor: '#000000', textAlign: 'center' } },
+        children: [
+          { id: 'h-badge', type: 'Text', props: { text: 'NEXT-GEN AI AUTOMATION', styles: { color: '#6366f1', fontSize: '0.875rem', fontWeight: '700', letterSpacing: '0.1em', display: 'block', marginBottom: '1.5rem' } } },
+          { id: 'h-title', type: 'Text', props: { text: 'Automate the busywork.\nFocus on the extraordinary.', styles: { color: 'white', fontSize: '4.5rem', fontWeight: '800', lineHeight: '1.05', letterSpacing: '-0.04em', margin: '0' } } },
+          { id: 'h-p', type: 'Text', props: { text: 'NexusAI handles your emails, schedules, and workflows so you don\'t have to. Reclaim 10 hours a week.', styles: { color: '#9ca3af', fontSize: '1.25rem', maxWidth: '600px', margin: '2rem auto' } } },
+          { id: 'h-cta', type: 'Button', props: { text: 'Start Free Trial', styles: { backgroundColor: 'white', color: 'black', padding: '1.25rem 2.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '1.1rem' } } }
+        ]
+      },
+      // FEATURES GRID
+      {
+        id: 'features', type: 'Container', props: { styles: { padding: '8rem 5rem', backgroundColor: '#0f172a' } },
+        children: [
+          { id: 'f-head', type: 'Text', props: { text: 'Built for modern teams', styles: { color: 'white', fontSize: '2.5rem', fontWeight: '800', textAlign: 'center', marginBottom: '4rem' } } },
+          { id: 'f-grid', type: 'Container', props: { styles: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' } }, children: [
+            { id: 'f1', type: 'Container', props: { styles: { padding: '2.5rem', backgroundColor: '#1e293b', borderRadius: '16px', border: '1px solid #334155' } }, children: [
+              { id: 'f1-icon', type: 'Text', props: { text: '🧠', styles: { fontSize: '2.5rem', display: 'block', marginBottom: '1.5rem' } } },
+              { id: 'f1-t', type: 'Text', props: { text: 'Contextual AI', styles: { color: 'white', fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.75rem' } } },
+              { id: 'f1-d', type: 'Text', props: { text: 'Understands your company context to draft perfect replies instantly.', styles: { color: '#94a3b8', fontSize: '1rem', lineHeight: '1.6' } } }
+            ]},
+            { id: 'f2', type: 'Container', props: { styles: { padding: '2.5rem', backgroundColor: '#1e293b', borderRadius: '16px', border: '1px solid #334155' } }, children: [
+              { id: 'f2-icon', type: 'Text', props: { text: '⚡', styles: { fontSize: '2.5rem', display: 'block', marginBottom: '1.5rem' } } },
+              { id: 'f2-t', type: 'Text', props: { text: 'Instant Workflows', styles: { color: 'white', fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.75rem' } } },
+              { id: 'f2-d', type: 'Text', props: { text: 'Connect your tools and let AI route tasks automatically.', styles: { color: '#94a3b8', fontSize: '1rem', lineHeight: '1.6' } } }
+            ]},
+            { id: 'f3', type: 'Container', props: { styles: { padding: '2.5rem', backgroundColor: '#1e293b', borderRadius: '16px', border: '1px solid #334155' } }, children: [
+              { id: 'f3-icon', type: 'Text', props: { text: '🔒', styles: { fontSize: '2.5rem', display: 'block', marginBottom: '1.5rem' } } },
+              { id: 'f3-t', type: 'Text', props: { text: 'Enterprise Security', styles: { color: 'white', fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.75rem' } } },
+              { id: 'f3-d', type: 'Text', props: { text: 'SOC2 compliant with end-to-end encryption.', styles: { color: '#94a3b8', fontSize: '1rem', lineHeight: '1.6' } } }
+            ]}
+          ]}
+        ]
+      },
+      // CTA SECTION
+      {
+        id: 'cta', type: 'Container', props: { styles: { padding: '8rem 5rem', backgroundColor: '#000000', textAlign: 'center' } },
+        children: [
+          { id: 'c-title', type: 'Text', props: { text: 'Ready to upgrade your workflow?', styles: { color: 'white', fontSize: '3.5rem', fontWeight: '800', margin: '0' } } },
+          { id: 'c-btn', type: 'Button', props: { text: 'Get Started Today', styles: { backgroundColor: '#6366f1', color: 'white', padding: '1.25rem 3rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '1.2rem', marginTop: '2.5rem' } } }
+        ]
+      }
+    ]
+  },
     {
     id: 'infinity-academi',
     name: 'Infinity Academic Excellence',
