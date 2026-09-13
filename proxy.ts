@@ -8,13 +8,13 @@ export async function proxy(request: NextRequest) {
   // REPLACE 'your-actual-vercel-app.vercel.app' WITH YOUR REAL VERCEL URL
   const mainAppDomains = ['localhost:3000', 'orbitalwebsites.vercel.app']; 
   
+  // If the visitor is on your main SaaS domain, let them use the app normally
   if (mainAppDomains.includes(hostname)) {
     return NextResponse.next();
   }
 
-  // Route client domains to the public viewer
+  // If the visitor is on a client's domain, silently rewrite the URL to load the public viewer.
   url.pathname = `/view`;
-  url.searchParams.set('domain', hostname);
   
   return NextResponse.rewrite(url);
 }
