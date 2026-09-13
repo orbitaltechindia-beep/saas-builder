@@ -47,7 +47,7 @@ export default function ClientDashboard() {
     return () => unsub();
   }, [router]);
 
-  const handleSelectTemplate = (templateId: string) => {
+    const handleSelectTemplate = async (templateId: string) => {
     const template = TEMPLATES.find(t => t.id === templateId);
     if (!template) return;
 
@@ -57,8 +57,31 @@ export default function ClientDashboard() {
     
     setSites(updatedSites);
     localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
-    setShowTemplateModal(false);
 
+    // AUTOMATION: Save the activeSiteId to the user's profile in Firestore
+    await updateDoc(doc(db, 'users', user.uid), {
+      activeSiteId: newSiteId
+    });
+
+    setShowTemplateModal(false);
+    router.push(`/editor/${newSiteId}/page-home?template=${templateId}`);
+  };  const handleSelectTemplate = async (templateId: string) => {
+    const template = TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+
+    const newSiteId = `site-${Date.now()}`;
+    const newSite = { id: newSiteId, name: `${template.name} Site`, template: templateId };
+    const updatedSites = [...sites, newSite];
+    
+    setSites(updatedSites);
+    localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
+
+    // AUTOMATION: Save the activeSiteId to the user's profile in Firestore
+    await updateDoc(doc(db, 'users', user.uid), {
+      activeSiteId: newSiteId
+    });
+
+    setShowTemplateModal(false);
     router.push(`/editor/${newSiteId}/page-home?template=${templateId}`);
   };
 

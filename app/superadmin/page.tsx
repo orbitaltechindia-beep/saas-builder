@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase/client';
-import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, updateDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { Globe, Check, X, Server, Cpu, Link2, ShieldCheck } from 'lucide-react';
 
 interface ClientUser {
@@ -24,14 +24,31 @@ export default function SuperadminPanel() {
     return () => unsub();
   }, []);
 
-  const approveDomain = async (userId: string, domain: string) => {
-    // In production, you would trigger the Vercel API here to add the domain.
-    // For now, we update Firestore.
+    const approveDomain = async (userId: string, domain: string) => {
+    // 1. Get the user's activeSiteId
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userData = userDoc.data();
+    const siteId = userData?.activeSiteId;
+
+    if (!siteId) {
+      alert("Client has not created a website yet!");
+      return;
+    }
+
+    // 2. Update the user's profile to 'live'
     await updateDoc(doc(db, 'users', userId), {
       customDomain: domain,
       domainStatus: 'live'
     });
-    alert(`Domain ${domain} approved! Go to Vercel Dashboard -> Settings -> Domains to add it.`);
+
+    // 3. AUTOMATION: Create a public routing record
+    // This allows the public to visit the domain without logging in
+    await setDoc(doc(db, 'domains', domain), {
+      siteId: siteId,
+      ownerId: userId
+    });
+
+    alert(`Domain ${domain} approved & mapped to site ${siteId}! Go to Vercel Dashboard -> Settings -> Domains to add it.`);
   };
 
   return (
