@@ -9,6 +9,64 @@ export interface Template {
 }
 
 export const TEMPLATES: Template[] = [
+
+    {
+    id: 'infinity-academic',
+    name: 'Infinity Academic Excellence',
+    description: 'Premium dark editorial edtech experience with gold accents.',
+    thumbnail: 'bg-gradient-to-br from-[#0b1020] to-[#11182b]',
+    pageData: [
+      // NAVBAR
+      {
+        id: 'inf-nav', type: 'Container', props: { styles: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 4rem', backgroundColor: '#0b1020', borderBottom: '1px solid #11182b', position: 'sticky', top: '0', zIndex: '100', backdropFilter: 'blur(12px)' } },
+        children: [
+          { id: 'inf-logo', type: 'Text', props: { text: 'INFINITY CLASSES', styles: { fontSize: '1.1rem', fontWeight: '800', color: '#ffffff', letterSpacing: '0.05em', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'inf-nav-cta', type: 'Button', props: { text: 'Enquire Now', styles: { backgroundColor: 'transparent', color: '#c79b55', padding: '0.75rem 1.5rem', borderRadius: '22px', border: '1px solid #c79b55', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' } } }
+        ]
+      },
+      // HERO SECTION
+      {
+        id: 'inf-hero', type: 'Container', props: { styles: { padding: '8rem 4rem', backgroundColor: '#0b1020', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' } },
+        children: [
+          { id: 'inf-eyebrow', type: 'Text', props: { text: 'ENGINEERED FOR ACADEMIC EXCELLENCE', styles: { color: '#c79b55', fontSize: '0.8rem', fontWeight: '700', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'block' } } },
+          { id: 'inf-h1', type: 'Text', props: { text: 'Build the discipline. Master the concepts. Achieve the extraordinary.', styles: { fontSize: 'clamp(40px, 6vw, 80px)', fontWeight: '800', color: '#ffffff', lineHeight: '1.05', letterSpacing: '-0.04em', margin: '0', maxWidth: '1000px', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'inf-hero-p', type: 'Text', props: { text: 'Structured preparation for students who refuse to leave their potential to chance — through rigorous teaching, deliberate practice and continuous performance analysis.', styles: { fontSize: '1.25rem', color: '#687083', maxWidth: '650px', lineHeight: '1.7', marginTop: '2rem' } } },
+          { id: 'inf-hero-btns', type: 'Container', props: { styles: { display: 'flex', gap: '1rem', marginTop: '3rem' } }, children: [
+            { id: 'inf-btn-1', type: 'Button', props: { text: 'Explore Programs ↗', styles: { backgroundColor: '#c79b55', color: '#0b1020', padding: '1rem 2rem', borderRadius: '22px', border: 'none', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer' } } },
+            { id: 'inf-btn-2', type: 'Button', props: { text: 'Book Counselling', styles: { backgroundColor: 'transparent', color: '#ffffff', padding: '1rem 2rem', borderRadius: '22px', border: '1px solid #687083', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer' } } }
+          ]}
+        ]
+      },
+      // TRUST STRIP
+      {
+        id: 'inf-trust', type: 'Container', props: { styles: { display: 'flex', justifyContent: 'space-around', padding: '4rem 4rem', backgroundColor: '#f7f8fb', borderBottom: '1px solid #e4e7ee' } },
+        children: [
+          { id: 'trust-1', type: 'Container', props: { styles: { textAlign: 'center' } }, children: [
+            { id: 't1-val', type: 'Text', props: { text: '15+', styles: { fontSize: '3rem', fontWeight: '800', color: '#0b1020', fontFamily: 'Manrope, sans-serif' } } },
+            { id: 't1-lab', type: 'Text', props: { text: 'Years of excellence', styles: { color: '#687083', fontSize: '0.9rem', marginTop: '0.5rem' } } }
+          ]},
+          { id: 'trust-2', type: 'Container', props: { styles: { textAlign: 'center' } }, children: [
+            { id: 't2-val', type: 'Text', props: { text: '10K+', styles: { fontSize: '3rem', fontWeight: '800', color: '#0b1020', fontFamily: 'Manrope, sans-serif' } } },
+            { id: 't2-lab', type: 'Text', props: { text: 'Students mentored', styles: { color: '#687083', fontSize: '0.9rem', marginTop: '0.5rem' } } }
+          ]},
+          { id: 'trust-3', type: 'Container', props: { styles: { textAlign: 'center' } }, children: [
+            { id: 't3-val', type: 'Text', props: { text: '500+', styles: { fontSize: '3rem', fontWeight: '800', color: '#0b1020', fontFamily: 'Manrope, sans-serif' } } },
+            { id: 't3-lab', type: 'Text', props: { text: 'Top ranks', styles: { color: '#687083', fontSize: '0.9rem', marginTop: '0.5rem' } } }
+          ]}
+        ]
+      },
+      // CTA SECTION
+      {
+        id: 'inf-cta', type: 'Container', props: { styles: { padding: '6rem 4rem', backgroundColor: '#0b1020', textAlign: 'center' } },
+        children: [
+          { id: 'cta-eye', type: 'Text', props: { text: 'YOUR NEXT STEP', styles: { color: '#c79b55', fontSize: '0.8rem', fontWeight: '700', letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: '1rem' } } },
+          { id: 'cta-h2', type: 'Text', props: { text: 'Start your academic journey with intention.', styles: { fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: '800', color: '#ffffff', margin: '0', lineHeight: '1.1', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'cta-btn', type: 'Button', props: { text: 'Start Enquiry ↗', styles: { backgroundColor: '#c79b55', color: '#0b1020', padding: '1.25rem 2.5rem', borderRadius: '22px', border: 'none', fontWeight: '700', fontSize: '1.1rem', cursor: 'pointer', marginTop: '2.5rem' } } }
+        ]
+      }
+    ]
+  }, 
+  
   {
     id: 'blank',
     name: 'Blank Canvas',
