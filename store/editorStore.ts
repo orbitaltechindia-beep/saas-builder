@@ -6,6 +6,9 @@ interface EditorState {
   selectedNodeId: string | null;
   setNodes: (nodes: Node[]) => void;
   addComponent: (node: Node) => void;
+  removeComponent: (nodeId: string) => void;
+  duplicateComponent: (nodeId: string) => void;
+  moveComponent: (nodeId: string, direction: 'up' | 'down') => void;
   updateComponentProps: (nodeId: string, props: Partial<Node['props']>) => void;
   selectComponent: (nodeId: string | null) => void;
 }

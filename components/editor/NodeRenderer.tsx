@@ -130,7 +130,7 @@ export function NodeRenderer({ node }: { node: Node }) {
               Empty Container
             </div>
           ) : (
-            node.children?.map((child) => <NodeRenderer key={child.id} node={child} />)
+            node.children?.map((child: Node) => <NodeRenderer key={child.id} node={child} />)
           )}
         </div>
       )}

@@ -4,6 +4,7 @@ export interface Node {
   props: {
     text?: string;
     src?: string;
+    href?: string;
     styles?: React.CSSProperties;
     classes?: string[];
   };
