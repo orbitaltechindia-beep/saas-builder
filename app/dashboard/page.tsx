@@ -20,7 +20,8 @@ export default function ClientDashboard() {
   const [user, setUser] = useState<any>(null);
   const [sites, setSites] = useState<ClientSite[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  
+  const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
+
   // Domain states
   const [domainTab, setDomainTab] = useState<'free' | 'branded'>('free');
   const [domainRequest, setDomainRequest] = useState('');
@@ -28,6 +29,7 @@ export default function ClientDashboard() {
   const [domainStatus, setDomainStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    setActiveSiteId(data.activeSiteId || null);
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) { router.push('/login'); return; }
       setUser(firebaseUser);
@@ -87,7 +89,13 @@ export default function ClientDashboard() {
     setDomainStatus('pending');
     alert(`Domain request sent for ${finalDomain}!`);
   };
-
+  const handleSetActive = async (siteId: string) => {
+    if (!user) return;
+    // Update the activeSiteId in Firestore
+    await updateDoc(doc(db, 'users', user.uid), { activeSiteId: siteId });
+    setActiveSiteId(siteId);
+    alert("This website is now active and will show on your domain!");
+  };
   const handlePauseResume = async (siteId: string) => {
     const updatedSites = sites.map(s => {
       if (s.id === siteId) {
@@ -243,20 +251,31 @@ export default function ClientDashboard() {
                   <h4 className="font-semibold text-white">{site.name}</h4>
                   <p className="text-xs text-neutral-500 mt-1 mb-4">ID: {site.id}</p>
                   
-                  <div className="flex gap-2 border-t border-neutral-800 pt-3">
-                    <button 
-                      onClick={() => handleViewLive(site.id)} 
-                      className="flex-1 bg-neutral-800 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-neutral-700"
-                      title="View Live Site"
-                    >
+                                   <div className="flex gap-2 border-t border-neutral-800 pt-3">
+                    <button onClick={() => handleViewLive(site.id)} className="flex-1 bg-neutral-800 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-neutral-700">
                       <Eye size={14} /> View
                     </button>
-                    <button 
-                      onClick={() => router.push(`/editor/${site.id}/page-home?template=${site.template}`)} 
-                      className="flex-1 bg-blue-600 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-blue-700"
-                      title="Edit Site"
-                    >
+                    <button onClick={() => router.push(`/editor/${site.id}/page-home?template=${site.template}`)} className="flex-1 bg-blue-600 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-blue-700">
                       <Settings size={14} /> Edit
+                    </button>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-2">
+                    <button 
+                      onClick={() => handleSetActive(site.id)} 
+                      disabled={site.id === activeSiteId}
+                      className={`flex-1 text-xs px-3 py-2 rounded flex items-center justify-center gap-1 transition-colors ${site.id === activeSiteId ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'}`}
+                    >
+                      {site.id === activeSiteId ? '✓ Active on Domain' : 'Set as Active'}
+                    </button>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={() => handlePauseResume(site.id)} className="flex-1 bg-neutral-800 text-neutral-300 text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-neutral-700">
+                      {site.status === 'live' ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Resume</>}
+                    </button>
+                    <button onClick={() => handleDelete(site.id)} className="flex-1 bg-red-900/30 text-red-400 text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-red-900/50">
+                      <Trash2 size={14} /> Delete
                     </button>
                   </div>
                   
