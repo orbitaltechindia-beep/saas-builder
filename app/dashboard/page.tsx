@@ -28,8 +28,7 @@ export default function ClientDashboard() {
   const [currentDomain, setCurrentDomain] = useState<string | null>(null);
   const [domainStatus, setDomainStatus] = useState<string | null>(null);
 
-  useEffect(() => {
-    setActiveSiteId(data.activeSiteId || null);
+    useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) { router.push('/login'); return; }
       setUser(firebaseUser);
@@ -37,10 +36,11 @@ export default function ClientDashboard() {
       // Fetch user domain data
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
       if (userDoc.exists()) {
-        const data = userDoc.data();
+        const data = userDoc.data(); // Define 'data' here
         setCurrentDomain(data.customDomain || null);
         setDomainStatus(data.domainStatus || null);
         setDomainRequest(data.customDomainRequest || '');
+        setActiveSiteId(data.activeSiteId || null); // Now 'data' is defined
       }
       
       // Load sites from localStorage
