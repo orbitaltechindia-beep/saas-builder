@@ -9,7 +9,9 @@ import EditorCanvas from '@/components/editor/EditorCanvas';
 import InspectorPanel from '@/components/editor/InspectorPanel';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TEMPLATES } from '@/lib/templates';
-import { Node } from '@/types'; // This is the import that was missing!
+import { Node } from '@/types';
+import { db } from '@/lib/firebase/client';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
   const resolvedParams = React.use(params);
@@ -30,6 +32,9 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
 
   useEffect(() => {
     setIsMounted(true);
+    
+    // Load from Firestore on mount (we will add this next), 
+    // but for now fallback to localStorage or Template
     const savedData = localStorage.getItem(`site_data_${siteId}`);
     if (savedData) {
       setNodes(JSON.parse(savedData));
@@ -42,6 +47,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     }
   }, [searchParams, siteId, setNodes]);
 
+  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -67,7 +73,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, moveComponent, removeComponent, duplicateComponent]);
 
-   const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && (over.id === 'canvas-root' || over.id !== active.id)) {
       const type = active.data.current?.type as Node['type'];
@@ -90,12 +96,29 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       }
     }
   };
-  const handleSave = () => {
-    localStorage.setItem(`site_data_${siteId}`, JSON.stringify(nodes));
-    setSaveStatus('Saved!');
-    setTimeout(() => setSaveStatus(''), 2000);
+
+  const handleSave = async () => {
+    setSaveStatus('Saving...');
+    try {
+      // Save to Firebase Firestore
+      await setDoc(doc(db, 'sites', siteId), {
+        pageData: nodes,
+        updatedAt: new Date()
+      }, { merge: true });
+      
+      // Also save to localStorage as a quick fallback cache
+      localStorage.setItem(`site_data_${siteId}`, JSON.stringify(nodes));
+      
+      setSaveStatus('Saved & Live!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    } catch (error) {
+      console.error("Save failed:", error);
+      setSaveStatus('Error saving!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    }
   };
 
+  // Prevent SSR rendering for the DnD components
   if (!isMounted) {
     return (
       <div className="flex flex-col h-screen justify-center items-center bg-neutral-900 text-white">
@@ -106,10 +129,22 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-neutral-900">
+      {/* Top Toolbar */}
       <div className="h-14 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between px-4 flex-shrink-0">
-        <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white text-sm flex items-center gap-2 transition-colors">
-          ← Back to Dashboard
-        </button>
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white text-sm flex items-center gap-2 transition-colors">
+            ← Back to Dashboard
+          </button>
+          {/* View Live Site Button */}
+          <a 
+            href={`/view/${siteId}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 transition-colors"
+          >
+            View Live Site ↗
+          </a>
+        </div>
         <div className="flex items-center gap-4">
           {saveStatus && <span className="text-green-500 text-sm font-medium">{saveStatus}</span>}
           <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
@@ -118,6 +153,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         </div>
       </div>
 
+      {/* Editor Body */}
       <DndContext onDragEnd={handleDragEnd}>
         <div className="flex flex-1 overflow-hidden">
           <SidebarBlocks />
