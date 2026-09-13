@@ -51,6 +51,20 @@ export function PublicNodeRenderer({ node }: { node: Node }) {
     return <div style={currentStyles}>{node.props.text}</div>;
   }
 
+  if (node.type === 'Link') {
+    return <a href={node.props.href} style={currentStyles}>{node.props.text}</a>;
+  }
+
+  if (node.type === 'Form') {
+    return (
+      <form style={currentStyles} onSubmit={(e) => e.preventDefault()} className="w-full">
+        <input type="text" placeholder="Name" className="w-full p-2 border border-neutral-300 rounded mb-2" />
+        <input type="email" placeholder="Email" className="w-full p-2 border border-neutral-300 rounded mb-2" />
+        <button type="submit" className="bg-blue-600 text-white p-2 rounded font-medium w-full">Submit</button>
+      </form>
+    );
+  }
+
   if (node.type === 'Container') {
     return (
       <div style={{ boxSizing: 'border-box', ...currentStyles }}>

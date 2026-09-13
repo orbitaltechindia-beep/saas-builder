@@ -103,7 +103,20 @@ export default function InspectorPanel() {
             </div>
           </div>
         )}
-
+        {/* Href for Links */}
+        {selectedNode.type === 'Link' && (
+          <div className="space-y-2">
+            <label className={labelClass}>Link URL (Href)</label>
+            <input 
+              type="text" 
+              placeholder="https://..." 
+              className={inputClass}
+              value={selectedNode.props.href || ''} 
+              onChange={(e) => updateComponentProps(selectedNode.id, { href: e.target.value })}
+            />
+          </div>
+        )}
+        
         {/* Spacing */}
         <div className="space-y-3">
           <label className={labelClass}>Spacing</label>

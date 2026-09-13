@@ -1,6 +1,7 @@
 'use client';
 import { useDraggable } from '@dnd-kit/core';
 import { Type, Image, Square, MousePointerClick, Video, Minus, MoveVertical, Star } from 'lucide-react';
+import { Link as LinkIcon, Mail } from 'lucide-react';
 
 function DraggableBlock({ id, type, label, icon }: { id: string; type: string; label: string; icon: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -25,7 +26,9 @@ export default function SidebarBlocks() {
       <DraggableBlock id="drag-button" type="Button" label="Button" icon={<MousePointerClick size={16} />} />
       <DraggableBlock id="drag-image" type="Image" label="Image" icon={<Image size={16} />} />
       <DraggableBlock id="drag-container" type="Container" label="Container (Flex)" icon={<Square size={16} />} />
-      
+      <DraggableBlock id="drag-link" type="Link" label="Text Link" icon={<LinkIcon size={16} />} />
+      <DraggableBlock id="drag-form" type="Form" label="Contact Form" icon={<Mail size={16} />} />
+
       <div className="my-4 border-t border-neutral-800"></div>
       
       <h2 className="text-white text-xs font-bold mb-2 uppercase tracking-widest text-neutral-500">Media & Layout</h2>

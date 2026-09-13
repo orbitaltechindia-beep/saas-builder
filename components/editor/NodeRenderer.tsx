@@ -142,6 +142,22 @@ export function NodeRenderer({ node }: { node: Node }) {
         </div>
       )}
 
+
+      {node.type === 'Link' && (
+        <a href={node.props.href} onClick={(e) => e.preventDefault()} style={currentStyles} className="pointer-events-none">
+          {node.props.text}
+        </a>
+      )}
+
+      {node.type === 'Form' && (
+        <div style={currentStyles} className="w-full pointer-events-none">
+          <input type="text" placeholder="Name" className="w-full p-2 border border-neutral-300 rounded" />
+          <input type="email" placeholder="Email" className="w-full p-2 border border-neutral-300 rounded" />
+          <button className="bg-blue-600 text-white p-2 rounded font-medium">Submit</button>
+        </div>
+      )}
+
+      
       {node.type === 'Container' && (
         <div 
           className="w-full"

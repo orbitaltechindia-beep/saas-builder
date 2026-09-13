@@ -103,7 +103,8 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         else if (type === 'Divider') newNode = { id: uuidv4(), type: 'Divider', props: { styles: { borderTop: '1px solid #e5e7eb', margin: '2rem 0' } } };
         else if (type === 'Spacer') newNode = { id: uuidv4(), type: 'Spacer', props: { styles: { height: '50px' } } };
         else if (type === 'Icon') newNode = { id: uuidv4(), type: 'Icon', props: { text: '⭐', styles: { fontSize: '2rem', color: '#f59e0b' } } };
-        
+        else if (type === 'Link') newNode = { id: uuidv4(), type: 'Link', props: { text: 'Click Here', href: '#', styles: { color: '#3b82f6', textDecoration: 'underline' } } };
+        else if (type === 'Form') newNode = { id: uuidv4(), type: 'Form', props: { styles: { display: 'flex', flexDirection: 'column', gap: '1rem', padding: '2rem', backgroundColor: '#f9fafb', borderRadius: '12px' } } };
         if (newNode) {
           addComponent(newNode);
         }
