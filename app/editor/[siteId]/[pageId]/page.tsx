@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import { v4 as uuidv4 } from 'uuid';
 import { useEditorStore } from '@/store/editorStore';
-import SidebarBlocks from '@/components/editor/SidebarBlocks';
+import LeftSidebar from '@/components/editor/LeftSidebar';
 import EditorCanvas from '@/components/editor/EditorCanvas';
 import InspectorPanel from '@/components/editor/InspectorPanel';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -169,7 +169,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       {/* Editor Body */}
       <DndContext onDragEnd={handleDragEnd}>
         <div className="flex flex-1 overflow-hidden">
-          <SidebarBlocks />
+          <LeftSidebar />
           <EditorCanvas />
           <InspectorPanel />
         </div>
