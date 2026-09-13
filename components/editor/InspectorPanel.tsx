@@ -190,7 +190,7 @@ export default function InspectorPanel() {
                   <label className="text-[10px] text-neutral-500 block mb-1">Justify</label>
                   <select className={inputClass}
                     value={currentStyles.justifyContent || 'flex-start'}
-                    onChange={(e) => updateComponentProps(selectedNode.id, { styles: { ...currentStyles, justifyContent: e.target.value } })}
+                    onChange={(e) => updateComponentProps(selectedNode.id, { styles: { ...currentStyles, opacity: String(parseInt(e.target.value) / 100) } })}
                   >
                     <option value="flex-start">Left</option>
                     <option value="center">Center</option>

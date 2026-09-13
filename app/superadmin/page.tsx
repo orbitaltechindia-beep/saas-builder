@@ -34,12 +34,7 @@ export default function SuperadminPanel() {
   const updateStatus = (id: string, status: 'live' | 'denied') => {
     const updatedUsers = users.map(u => {
       if (u.id === id) {
-        return { 
-          ...u, 
-          status, 
-          dnsStatus: status === 'live' ? 'verified' : 'pending', 
-          templateAssigned: status === 'live' ? 'Infinity Premium' : 'None' 
-        };
+       return { ...u, status, dnsStatus: status === 'live' ? 'verified' as const : 'pending' as const, templateAssigned: status === 'live' ? 'Infinity Premium' : 'None' };
       }
       return u;
     });
