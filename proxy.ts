@@ -2,15 +2,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function proxy(request: NextRequest) {
-  const token = request.cookies.get('firebase-token')?.value;
-  
-  const protectedRoutes = ['/dashboard', '/editor'];
-  const isProtected = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route));
-
-  if (isProtected && !token) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-  
+  // We are temporarily disabling the server-side redirect 
+  // because our Auth is happening on the client side.
+  // The dashboard component itself will handle the redirect if the user is not logged in.
   return NextResponse.next();
 }
 
