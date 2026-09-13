@@ -31,7 +31,8 @@ export default function SuperadminPanel() {
     }
   }, []);
 
-     const updatedUsers = users.map(u => {
+  const updateStatus = (id: string, status: 'live' | 'denied') => {
+    const updatedUsers = users.map(u => {
       if (u.id === id) {
         return { 
           ...u, 
