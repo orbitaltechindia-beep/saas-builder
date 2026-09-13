@@ -5,13 +5,14 @@ import { TEMPLATES } from '@/lib/templates';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase/client';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import { LayoutGrid, Globe, LogOut, Plus, Settings } from 'lucide-react';
+import { doc, getDoc, updateDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { LayoutGrid, Globe, LogOut, Plus, Settings, Eye, Pause, Play, Trash2 } from 'lucide-react';
 
 interface ClientSite {
   id: string;
   name: string;
   template: string;
+  status: 'live' | 'paused';
 }
 
 export default function ClientDashboard() {
@@ -35,6 +36,7 @@ export default function ClientDashboard() {
         setDomainStatus(data.domainStatus || null);
         setDomainRequest(data.customDomainRequest || '');
       }
+      
       const saved = localStorage.getItem(`saas_sites_${firebaseUser.uid}`);
       if (saved) setSites(JSON.parse(saved));
     });
@@ -45,7 +47,7 @@ export default function ClientDashboard() {
     const template = TEMPLATES.find(t => t.id === templateId);
     if (!template) return;
     const newSiteId = `site-${Date.now()}`;
-    const newSite = { id: newSiteId, name: `${template.name} Site`, template: templateId };
+    const newSite = { id: newSiteId, name: `${template.name} Site`, template: templateId, status: 'live' as 'live' | 'paused' };
     const updatedSites = [...sites, newSite];
     setSites(updatedSites);
     localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
@@ -59,6 +61,41 @@ export default function ClientDashboard() {
     await updateDoc(doc(db, 'users', user.uid), { customDomainRequest: domainRequest, domainStatus: 'pending' });
     setDomainStatus('pending');
     alert('Domain request sent!');
+  };
+
+  const handlePauseResume = async (siteId: string) => {
+    const updatedSites = sites.map(s => {
+      if (s.id === siteId) {
+        const newStatus = s.status === 'live' ? 'paused' : 'live';
+        // Update Firestore status
+        updateDoc(doc(db, 'sites', siteId), { status: newStatus });
+        return { ...s, status: newStatus };
+      }
+      return s;
+    });
+    setSites(updatedSites);
+    localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
+  };
+
+  const handleDelete = async (siteId: string) => {
+    if (!confirm("Are you sure you want to permanently delete this website?")) return;
+    
+    const updatedSites = sites.filter(s => s.id !== siteId);
+    setSites(updatedSites);
+    localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
+    
+    // Delete from Firestore
+    await deleteDoc(doc(db, 'sites', siteId));
+    alert("Website deleted successfully.");
+  };
+
+  const handleViewLive = (siteId: string) => {
+    // If client has an active custom domain, open that. Otherwise, open the default view route.
+    if (currentDomain) {
+      window.open(`https://${currentDomain}`, '_blank');
+    } else {
+      window.open(`/view/${siteId}`, '_blank');
+    }
   };
 
   if (!user) return <div className="h-screen bg-neutral-950 flex items-center justify-center text-white">Loading...</div>;
@@ -127,11 +164,49 @@ export default function ClientDashboard() {
             </div>
           ) : (
             sites.map(site => (
-              <div key={site.id} className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden cursor-pointer hover:border-blue-500 transition-all group" onClick={() => router.push(`/editor/${site.id}/page-home?template=${site.template}`)}>
-                <div className="h-32 bg-neutral-800 group-hover:opacity-80 transition-opacity"></div>
+              <div key={site.id} className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden group transition-all">
+                <div className="h-32 bg-neutral-800 relative">
+                  {site.status === 'paused' && (
+                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-yellow-400 text-sm font-medium">
+                      <Pause size={16} className="mr-1" /> Paused
+                    </div>
+                  )}
+                </div>
                 <div className="p-4">
                   <h4 className="font-semibold text-white">{site.name}</h4>
-                  <p className="text-xs text-neutral-500 mt-1">Last edited: Just now</p>
+                  <p className="text-xs text-neutral-500 mt-1 mb-4">ID: {site.id}</p>
+                  
+                  <div className="flex gap-2 border-t border-neutral-800 pt-3">
+                    <button 
+                      onClick={() => handleViewLive(site.id)} 
+                      className="flex-1 bg-neutral-800 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-neutral-700"
+                      title="View Live Site"
+                    >
+                      <Eye size={14} /> View
+                    </button>
+                    <button 
+                      onClick={() => router.push(`/editor/${site.id}/page-home?template=${site.template}`)} 
+                      className="flex-1 bg-blue-600 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-blue-700"
+                      title="Edit Site"
+                    >
+                      <Settings size={14} /> Edit
+                    </button>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-2">
+                    <button 
+                      onClick={() => handlePauseResume(site.id)} 
+                      className="flex-1 bg-neutral-800 text-neutral-300 text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-neutral-700"
+                    >
+                      {site.status === 'live' ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Resume</>}
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(site.id)} 
+                      className="flex-1 bg-red-900/30 text-red-400 text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-red-900/50"
+                    >
+                      <Trash2 size={14} /> Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))

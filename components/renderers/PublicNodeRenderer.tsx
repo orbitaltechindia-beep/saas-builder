@@ -31,6 +31,26 @@ export function PublicNodeRenderer({ node }: { node: Node }) {
     );
   }
 
+    if (node.type === 'Video') {
+    return (
+      <div style={currentStyles} className="overflow-hidden rounded-md">
+        <iframe src={node.props.src} className="w-full h-full" allowFullScreen></iframe>
+      </div>
+    );
+  }
+
+  if (node.type === 'Divider') {
+    return <hr style={currentStyles} />;
+  }
+
+  if (node.type === 'Spacer') {
+    return <div style={currentStyles} />;
+  }
+
+  if (node.type === 'Icon') {
+    return <div style={currentStyles}>{node.props.text}</div>;
+  }
+
   if (node.type === 'Container') {
     return (
       <div style={{ boxSizing: 'border-box', ...currentStyles }}>

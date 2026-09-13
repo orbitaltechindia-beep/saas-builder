@@ -88,22 +88,21 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, moveComponent, removeComponent, duplicateComponent]);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+    const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && (over.id === 'canvas-root' || over.id !== active.id)) {
       const type = active.data.current?.type as Node['type'];
       if (active.id.toString().startsWith('drag-')) {
         let newNode: Node | undefined = undefined;
 
-        if (type === 'Text') {
-          newNode = { id: uuidv4(), type: 'Text', props: { text: 'Edit this text', styles: { color: '#111111' } } };
-        } else if (type === 'Button') {
-          newNode = { id: uuidv4(), type: 'Button', props: { text: 'Click Me' } };
-        } else if (type === 'Image') {
-          newNode = { id: uuidv4(), type: 'Image', props: {} };
-        } else if (type === 'Container') {
-          newNode = { id: uuidv4(), type: 'Container', props: {}, children: [] };
-        }
+        if (type === 'Text') newNode = { id: uuidv4(), type: 'Text', props: { text: 'Edit this text', styles: { color: '#111111', fontSize: '1.25rem' } } };
+        else if (type === 'Button') newNode = { id: uuidv4(), type: 'Button', props: { text: 'Click Me', styles: { backgroundColor: '#3b82f6', color: '#ffffff', padding: '0.75rem 1.5rem', borderRadius: '0.5rem' } } };
+        else if (type === 'Image') newNode = { id: uuidv4(), type: 'Image', props: { styles: { height: '200px', backgroundColor: '#f3f4f6' } } };
+        else if (type === 'Container') newNode = { id: uuidv4(), type: 'Container', props: { styles: { padding: '1rem', border: '1px dashed #d1d5db' } }, children: [] };
+        else if (type === 'Video') newNode = { id: uuidv4(), type: 'Video', props: { src: 'https://www.youtube.com/embed/dQw4w9WgXcQ', styles: { width: '100%', height: '300px' } } };
+        else if (type === 'Divider') newNode = { id: uuidv4(), type: 'Divider', props: { styles: { borderTop: '1px solid #e5e7eb', margin: '2rem 0' } } };
+        else if (type === 'Spacer') newNode = { id: uuidv4(), type: 'Spacer', props: { styles: { height: '50px' } } };
+        else if (type === 'Icon') newNode = { id: uuidv4(), type: 'Icon', props: { text: '⭐', styles: { fontSize: '2rem', color: '#f59e0b' } } };
         
         if (newNode) {
           addComponent(newNode);
@@ -111,7 +110,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       }
     }
   };
-
   const handleSave = async () => {
     setSaveStatus('Saving...');
     try {

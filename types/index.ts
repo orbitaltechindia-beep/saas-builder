@@ -1,6 +1,6 @@
 export interface Node {
   id: string;
-  type: 'Container' | 'Text' | 'Image' | 'Button';
+    type: 'Container' | 'Text' | 'Image' | 'Button' | 'Video' | 'Divider' | 'Spacer' | 'Icon';
   props: {
     text?: string;
     src?: string;

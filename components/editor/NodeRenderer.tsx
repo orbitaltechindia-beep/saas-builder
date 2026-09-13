@@ -120,6 +120,28 @@ export function NodeRenderer({ node }: { node: Node }) {
         </div>
       )}
 
+            {node.type === 'Video' && (
+        <div style={currentStyles} className="bg-neutral-100 flex items-center justify-center rounded-md overflow-hidden">
+          <iframe src={node.props.src} className="w-full h-full" allowFullScreen></iframe>
+        </div>
+      )}
+
+      {node.type === 'Divider' && (
+        <hr style={currentStyles} className="w-full" />
+      )}
+
+      {node.type === 'Spacer' && (
+        <div style={currentStyles} className="w-full bg-neutral-100/50 flex items-center justify-center text-neutral-300 text-xs">
+          Spacer
+        </div>
+      )}
+
+      {node.type === 'Icon' && (
+        <div style={currentStyles} className="flex items-center justify-center w-full">
+          {node.props.text}
+        </div>
+      )}
+
       {node.type === 'Container' && (
         <div 
           className="w-full"
