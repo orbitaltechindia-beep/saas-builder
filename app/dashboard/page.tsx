@@ -81,22 +81,33 @@ export default function ClientDashboard() {
 
   const handleSetActive = async (siteId: string) => {
     if (!user) return;
+    // 1. Update user profile
     await updateDoc(doc(db, 'users', user.uid), { activeSiteId: siteId });
     setActiveSiteId(siteId);
+    
+    // 2. CRITICAL FIX: If user has a live domain, update the domains collection to point to this new site!
+    if (currentDomain) {
+      await setDoc(doc(db, 'domains', currentDomain), {
+        siteId: siteId,
+        ownerId: user.uid
+      });
+    }
+    
     alert("This website is now active and will show on your domain!");
   };
 
   const handlePauseResume = async (siteId: string) => {
-    const updatedSites = sites.map(s => {
-      if (s.id === siteId) {
-        const newStatus = s.status === 'live' ? 'paused' : 'live';
-        updateDoc(doc(db, 'sites', siteId), { status: newStatus });
-        return { ...s, status: newStatus };
-      }
-      return s;
-    });
+    const site = sites.find(s => s.id === siteId);
+    if (!site) return;
+    const newStatus = site.status === 'live' ? 'paused' : 'live';
+    
+    // Update local state
+    const updatedSites = sites.map(s => s.id === siteId ? { ...s, status: newStatus } : s);
     setSites(updatedSites);
     localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
+    
+    // Update Firestore status
+    await updateDoc(doc(db, 'sites', siteId), { status: newStatus });
   };
 
   const handleDelete = async (siteId: string) => {
@@ -128,8 +139,25 @@ export default function ClientDashboard() {
       const data = await res.json();
       if (data.success) {
         const newSiteId = `site-${Date.now()}`;
-        await setDoc(doc(db, 'sites', newSiteId), { pageData: data.nodes, updatedAt: new Date() });
+        // Create a title from the prompt
+        const aiTitle = aiPrompt.substring(0, 20) + (aiPrompt.length > 20 ? "..." : "") + " (AI)";
+        
+        // Save to Firestore with the title
+        await setDoc(doc(db, 'sites', newSiteId), { 
+          pageData: data.nodes, 
+          title: aiTitle,
+          updatedAt: new Date() 
+        });
+        
+        // Update activeSiteId
         await updateDoc(doc(db, 'users', user.uid), { activeSiteId: newSiteId });
+        
+        // Add to local dashboard state so it appears instantly
+        const newSite = { id: newSiteId, name: aiTitle, template: 'ai-generated', status: 'live' };
+        const updatedSites = [...sites, newSite];
+        setSites(updatedSites);
+        localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
+        
         router.push(`/editor/${newSiteId}/page-home`);
       } else {
         alert("AI generation failed. Try a different prompt.");

@@ -12,10 +12,15 @@ export default function PublicSitePage({ params }: { params: Promise<{ siteId: s
   const [nodes, setNodes] = useState<Node[] | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+        const fetchData = async () => {
       try {
         const siteDoc = await getDoc(doc(db, 'sites', siteId));
         if (siteDoc.exists()) {
+          // CHECK IF SITE IS PAUSED
+          if (siteDoc.data().status === 'paused') {
+            setNodes([]); // Render the empty/paused state
+            return;
+          }
           setNodes(siteDoc.data()?.pageData || []);
         } else {
           setNodes([]);
