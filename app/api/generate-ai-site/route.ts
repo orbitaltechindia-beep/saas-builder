@@ -27,8 +27,8 @@ export async function POST(req: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Changed to gemini-2.5-flash based on your available models list!
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    // Updated to the exact model Google recommended in the error message!
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
 
     const result = await model.generateContent([
       { text: systemPrompt },
