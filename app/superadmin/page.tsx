@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase/client';
+import { db, auth } from '@/lib/firebase/client';
 import { collection, onSnapshot, updateDoc, doc, getDoc, setDoc } from 'firebase/firestore';
-import { Globe, Check, X, Server, Cpu, Link2, ShieldCheck } from 'lucide-react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { Globe, Check, X, Server, Cpu, Link2, ShieldCheck, Loader2 } from 'lucide-react';
 
 interface ClientUser {
   id: string;
@@ -14,17 +16,44 @@ interface ClientUser {
 }
 
 export default function SuperadminPanel() {
+  const router = useRouter();
   const [users, setUsers] = useState<ClientUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
 
+  // 1. Auth Guard: Check if user is logged in and is a Superadmin
   useEffect(() => {
-    // Real-time listener for users collection
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        router.push('/login');
+        return;
+      }
+
+      // Fetch user's role from Firestore
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+      if (userDoc.exists() && userDoc.data()?.role === 'superadmin') {
+        setIsSuperadmin(true);
+        setLoading(false);
+      } else {
+        // If they are not a superadmin, kick them out!
+        alert("Access Denied: You do not have Superadmin privileges.");
+        router.push('/dashboard');
+      }
+    });
+    return () => unsub();
+  }, [router]);
+
+  // 2. Fetch Clients Data (only if they are a superadmin)
+  useEffect(() => {
+    if (!isSuperadmin) return;
+    
     const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
       setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ClientUser)));
     });
     return () => unsub();
-  }, []);
+  }, [isSuperadmin]);
 
-     const approveDomain = async (userId: string, domain: string) => {
+  const approveDomain = async (userId: string, domain: string) => {
     try {
       // 1. Automatically add domain to Vercel
       const vercelRes = await fetch('/api/setup-domain', {
@@ -66,6 +95,16 @@ export default function SuperadminPanel() {
       alert("An error occurred during automation.");
     }
   };
+
+  // Loading State while checking Auth
+  if (loading || !isSuperadmin) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-white">
+        <Loader2 className="animate-spin mr-3" size={24} />
+        Verifying Superadmin Access...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-950 p-8 text-white font-sans">
