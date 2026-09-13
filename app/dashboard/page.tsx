@@ -12,7 +12,7 @@ interface ClientSite {
   id: string;
   name: string;
   template: string;
-  status: string;
+  status: string; // Using string to avoid TS strict errors with localStorage
 }
 
 export default function ClientDashboard() {
@@ -20,8 +20,10 @@ export default function ClientDashboard() {
   const [user, setUser] = useState<any>(null);
   const [sites, setSites] = useState<ClientSite[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [domainRequest, setDomainRequest] = useState('');
+  
+  // Domain states
   const [domainTab, setDomainTab] = useState<'free' | 'branded'>('free');
+  const [domainRequest, setDomainRequest] = useState('');
   const [currentDomain, setCurrentDomain] = useState<string | null>(null);
   const [domainStatus, setDomainStatus] = useState<string | null>(null);
 
@@ -30,6 +32,7 @@ export default function ClientDashboard() {
       if (!firebaseUser) { router.push('/login'); return; }
       setUser(firebaseUser);
 
+      // Fetch user domain data
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
@@ -38,27 +41,30 @@ export default function ClientDashboard() {
         setDomainRequest(data.customDomainRequest || '');
       }
       
+      // Load sites from localStorage
       const saved = localStorage.getItem(`saas_sites_${firebaseUser.uid}`);
       if (saved) setSites(JSON.parse(saved));
     });
     return () => unsub();
   }, [router]);
 
-    const handleSelectTemplate = async (templateId: string) => {
+  const handleSelectTemplate = async (templateId: string) => {
     const template = TEMPLATES.find(t => t.id === templateId);
     if (!template) return;
     const newSiteId = `site-${Date.now()}`;
-    // Removed the strict type cast 'as 'live' | 'paused''
     const newSite = { id: newSiteId, name: `${template.name} Site`, template: templateId, status: 'live' };
     const updatedSites = [...sites, newSite];
     setSites(updatedSites);
     localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
+    
+    // Update activeSiteId in Firestore
     await updateDoc(doc(db, 'users', user.uid), { activeSiteId: newSiteId });
+    
     setShowTemplateModal(false);
     router.push(`/editor/${newSiteId}/page-home?template=${templateId}`);
   };
 
-   const handleDomainRequest = async () => {
+  const handleDomainRequest = async () => {
     if (!domainRequest || !user) return;
     
     // Clean the input based on the selected tab
@@ -73,7 +79,11 @@ export default function ClientDashboard() {
     }
 
     // Save the cleaned domain to Firestore
-    await updateDoc(doc(db, 'users', user.uid), { customDomainRequest: finalDomain, domainStatus: 'pending' });
+    await updateDoc(doc(db, 'users', user.uid), { 
+      customDomainRequest: finalDomain, 
+      domainStatus: 'pending' 
+    });
+    
     setDomainStatus('pending');
     alert(`Domain request sent for ${finalDomain}!`);
   };
@@ -118,7 +128,7 @@ export default function ClientDashboard() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-black border-r border-neutral-900 p-6 flex flex-col justify-between">
+      <aside className="w-64 bg-black border-r border-neutral-900 p-6 flex flex-col justify-between flex-shrink-0">
         <div>
           <h1 className="text-xl font-bold tracking-tight mb-8">Orbital Builder</h1>
           <nav className="flex flex-col gap-2">
@@ -150,8 +160,7 @@ export default function ClientDashboard() {
           </button>
         </div>
 
-        {/* Domain Card */}
-                {/* Setup Domain Card */}
+        {/* Setup Domain Card */}
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 mb-12 max-w-2xl">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Globe size={18} /> Setup Domain</h3>
           
