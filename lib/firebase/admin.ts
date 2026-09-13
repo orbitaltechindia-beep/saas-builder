@@ -1,6 +1,4 @@
-import * as adminImport from 'firebase-admin';
-
-const admin = adminImport as any;
+import * as admin from 'firebase-admin';
 
 if (!admin.apps.length) {
   try {
