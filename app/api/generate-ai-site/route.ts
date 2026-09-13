@@ -34,8 +34,11 @@ export async function POST(req: Request) {
 
     const parsedNodes = JSON.parse(content);
     return NextResponse.json({ success: true, nodes: parsedNodes });
-  } catch (error: any) {
+    } catch (error: any) {
     console.error("Gemini AI Error:", error);
-    return NextResponse.json({ error: "Failed to generate site" }, { status: 500 });
+    // Send the exact error message back to the browser
+    return NextResponse.json({ 
+      error: "Failed to generate site", 
+      details: error.message || "Unknown error" 
+    }, { status: 500 });
   }
-}
