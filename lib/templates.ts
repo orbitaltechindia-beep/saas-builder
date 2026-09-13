@@ -11,7 +11,7 @@ export interface Template {
 export const TEMPLATES: Template[] = [
 
     {
-    id: 'infinity-academic',
+    id: 'infinity-academi',
     name: 'Infinity Academic Excellence',
     description: 'Premium dark editorial edtech experience with gold accents.',
     thumbnail: 'bg-gradient-to-br from-[#0b1020] to-[#11182b]',
@@ -65,8 +65,145 @@ export const TEMPLATES: Template[] = [
         ]
       }
     ]
-  }, 
-  
+  },  {
+    id: 'infinity-academ',
+    name: 'Infinity Academic Excellence',
+    description: 'Massive premium dark edtech experience with gold accents.',
+    thumbnail: 'bg-gradient-to-br from-[#0b1020] to-[#11182b]',
+    pageData: [
+      // NAVBAR
+      {
+        id: 'inf-nav', type: 'Container', props: { styles: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 4rem', backgroundColor: '#0b1020', borderBottom: '1px solid #11182b', position: 'sticky', top: '0', zIndex: '100', backdropFilter: 'blur(12px)' } },
+        children: [
+          { id: 'inf-logo', type: 'Text', props: { text: 'INFINITY CLASSES', styles: { fontSize: '1.1rem', fontWeight: '800', color: '#ffffff', letterSpacing: '0.05em', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'inf-nav-cta', type: 'Button', props: { text: 'Enquire Now', styles: { backgroundColor: 'transparent', color: '#c79b55', padding: '0.75rem 1.5rem', borderRadius: '22px', border: '1px solid #c79b55', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' } } }
+        ]
+      },
+      // HERO SECTION
+      {
+        id: 'inf-hero', type: 'Container', props: { styles: { padding: '8rem 4rem', backgroundColor: '#0b1020', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' } },
+        children: [
+          { id: 'inf-eyebrow', type: 'Text', props: { text: 'ENGINEERED FOR ACADEMIC EXCELLENCE', styles: { color: '#c79b55', fontSize: '0.8rem', fontWeight: '700', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'block' } } },
+          { id: 'inf-h1', type: 'Text', props: { text: 'Build the discipline. Master the concepts. Achieve the extraordinary.', styles: { fontSize: 'clamp(40px, 6vw, 80px)', fontWeight: '800', color: '#ffffff', lineHeight: '1.05', letterSpacing: '-0.04em', margin: '0', maxWidth: '1000px', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'inf-hero-p', type: 'Text', props: { text: 'Structured preparation for students who refuse to leave their potential to chance — through rigorous teaching, deliberate practice and continuous performance analysis.', styles: { fontSize: '1.25rem', color: '#687083', maxWidth: '650px', lineHeight: '1.7', marginTop: '2rem' } } },
+          { id: 'inf-hero-btns', type: 'Container', props: { styles: { display: 'flex', gap: '1rem', marginTop: '3rem' } }, children: [
+            { id: 'inf-btn-1', type: 'Button', props: { text: 'Explore Programs ↗', styles: { backgroundColor: '#c79b55', color: '#0b1020', padding: '1rem 2rem', borderRadius: '22px', border: 'none', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer' } } },
+            { id: 'inf-btn-2', type: 'Button', props: { text: 'Book Counselling', styles: { backgroundColor: 'transparent', color: '#ffffff', padding: '1rem 2rem', borderRadius: '22px', border: '1px solid #687083', fontWeight: '700', fontSize: '0.95rem', cursor: 'pointer' } } }
+          ]}
+        ]
+      },
+      // TRUST STRIP
+      {
+        id: 'inf-trust', type: 'Container', props: { styles: { display: 'flex', justifyContent: 'space-around', padding: '4rem 4rem', backgroundColor: '#f7f8fb', borderBottom: '1px solid #e4e7ee' } },
+        children: [
+          { id: 'trust-1', type: 'Container', props: { styles: { textAlign: 'center' } }, children: [
+            { id: 't1-val', type: 'Text', props: { text: '15+', styles: { fontSize: '3rem', fontWeight: '800', color: '#0b1020', fontFamily: 'Manrope, sans-serif' } } },
+            { id: 't1-lab', type: 'Text', props: { text: 'Years of excellence', styles: { color: '#687083', fontSize: '0.9rem', marginTop: '0.5rem' } } }
+          ]},
+          { id: 'trust-2', type: 'Container', props: { styles: { textAlign: 'center' } }, children: [
+            { id: 't2-val', type: 'Text', props: { text: '10K+', styles: { fontSize: '3rem', fontWeight: '800', color: '#0b1020', fontFamily: 'Manrope, sans-serif' } } },
+            { id: 't2-lab', type: 'Text', props: { text: 'Students mentored', styles: { color: '#687083', fontSize: '0.9rem', marginTop: '0.5rem' } } }
+          ]},
+          { id: 'trust-3', type: 'Container', props: { styles: { textAlign: 'center' } }, children: [
+            { id: 't3-val', type: 'Text', props: { text: '500+', styles: { fontSize: '3rem', fontWeight: '800', color: '#0b1020', fontFamily: 'Manrope, sans-serif' } } },
+            { id: 't3-lab', type: 'Text', props: { text: 'Top ranks', styles: { color: '#687083', fontSize: '0.9rem', marginTop: '0.5rem' } } }
+          ]}
+        ]
+      },
+      // METHODOLOGY GRID
+      {
+        id: 'inf-method', type: 'Container', props: { styles: { padding: '6rem 4rem', backgroundColor: '#ffffff' } },
+        children: [
+          { id: 'method-head', type: 'Text', props: { text: 'The Infinity Method', styles: { fontSize: '2.5rem', fontWeight: '800', color: '#0b1020', textAlign: 'center', marginBottom: '3rem', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'method-grid', type: 'Container', props: { styles: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' } }, children: [
+            { id: 'm1', type: 'Container', props: { styles: { padding: '2rem', backgroundColor: '#f7f8fb', borderRadius: '16px', border: '1px solid #e4e7ee' } }, children: [
+              { id: 'm1-num', type: 'Text', props: { text: '01', styles: { color: '#c79b55', fontSize: '1.5rem', fontWeight: '800', fontFamily: 'Manrope, sans-serif' } } },
+              { id: 'm1-t', type: 'Text', props: { text: 'Concept', styles: { fontSize: '1.25rem', fontWeight: '700', color: '#0b1020', margin: '1rem 0 0.5rem' } } },
+              { id: 'm1-d', type: 'Text', props: { text: 'Build fundamental understanding.', styles: { color: '#687083', fontSize: '0.95rem', lineHeight: '1.6' } } }
+            ]},
+            { id: 'm2', type: 'Container', props: { styles: { padding: '2rem', backgroundColor: '#f7f8fb', borderRadius: '16px', border: '1px solid #e4e7ee' } }, children: [
+              { id: 'm2-num', type: 'Text', props: { text: '02', styles: { color: '#c79b55', fontSize: '1.5rem', fontWeight: '800', fontFamily: 'Manrope, sans-serif' } } },
+              { id: 'm2-t', type: 'Text', props: { text: 'Practice', styles: { fontSize: '1.25rem', fontWeight: '700', color: '#0b1020', margin: '1rem 0 0.5rem' } } },
+              { id: 'm2-d', type: 'Text', props: { text: 'Turn understanding into solving ability.', styles: { color: '#687083', fontSize: '0.95rem', lineHeight: '1.6' } } }
+            ]},
+            { id: 'm3', type: 'Container', props: { styles: { padding: '2rem', backgroundColor: '#f7f8fb', borderRadius: '16px', border: '1px solid #e4e7ee' } }, children: [
+              { id: 'm3-num', type: 'Text', props: { text: '03', styles: { color: '#c79b55', fontSize: '1.5rem', fontWeight: '800', fontFamily: 'Manrope, sans-serif' } } },
+              { id: 'm3-t', type: 'Text', props: { text: 'Testing', styles: { fontSize: '1.25rem', fontWeight: '700', color: '#0b1020', margin: '1rem 0 0.5rem' } } },
+              { id: 'm3-d', type: 'Text', props: { text: 'Measure performance under pressure.', styles: { color: '#687083', fontSize: '0.95rem', lineHeight: '1.6' } } }
+            ]}
+          ]}
+        ]
+      },
+      // CTA SECTION
+      {
+        id: 'inf-cta', type: 'Container', props: { styles: { padding: '6rem 4rem', backgroundColor: '#0b1020', textAlign: 'center' } },
+        children: [
+          { id: 'cta-eye', type: 'Text', props: { text: 'YOUR NEXT STEP', styles: { color: '#c79b55', fontSize: '0.8rem', fontWeight: '700', letterSpacing: '0.15em', textTransform: 'uppercase', display: 'block', marginBottom: '1rem' } } },
+          { id: 'cta-h2', type: 'Text', props: { text: 'Start your academic journey with intention.', styles: { fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: '800', color: '#ffffff', margin: '0', lineHeight: '1.1', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'cta-btn', type: 'Button', props: { text: 'Start Enquiry ↗', styles: { backgroundColor: '#c79b55', color: '#0b1020', padding: '1.25rem 2.5rem', borderRadius: '22px', border: 'none', fontWeight: '700', fontSize: '1.1rem', cursor: 'pointer', marginTop: '2.5rem' } } }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'saas-startup-pro',
+    name: 'SaaS Startup Pro',
+    description: 'Massive modern light-mode SaaS landing page with pricing.',
+    thumbnail: 'bg-gradient-to-br from-blue-500 to-indigo-600',
+    pageData: [
+      // NAVBAR
+      {
+        id: 'saas-nav', type: 'Container', props: { styles: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 4rem', backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb', position: 'sticky', top: '0', zIndex: '100', backdropFilter: 'blur(12px)' } },
+        children: [
+          { id: 'saas-logo', type: 'Text', props: { text: 'FlowOps', styles: { fontSize: '1.25rem', fontWeight: '800', color: '#111827', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'saas-nav-cta', type: 'Button', props: { text: 'Get Started', styles: { backgroundColor: '#111827', color: '#ffffff', padding: '0.75rem 1.5rem', borderRadius: '8px', border: 'none', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer' } } }
+        ]
+      },
+      // HERO
+      {
+        id: 'saas-hero', type: 'Container', props: { styles: { padding: '8rem 4rem', backgroundColor: '#ffffff', textAlign: 'center' } },
+        children: [
+          { id: 'saas-badge', type: 'Text', props: { text: '🚀 Now with AI Automation', styles: { display: 'inline-block', backgroundColor: '#eff6ff', color: '#2563eb', padding: '0.5rem 1rem', borderRadius: '999px', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1.5rem' } } },
+          { id: 'saas-h1', type: 'Text', props: { text: 'Scale your business 10x faster.', styles: { fontSize: 'clamp(40px, 6vw, 80px)', fontWeight: '800', color: '#111827', lineHeight: '1.05', letterSpacing: '-0.04em', margin: '0', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'saas-p', type: 'Text', props: { text: 'The all-in-one platform to manage your clients, automate your workflow, and drive revenue.', styles: { fontSize: '1.25rem', color: '#6b7280', maxWidth: '600px', margin: '2rem auto' } } },
+          { id: 'saas-btn', type: 'Button', props: { text: 'Start for Free', styles: { backgroundColor: '#2563eb', color: '#ffffff', padding: '1rem 2rem', borderRadius: '8px', border: 'none', fontWeight: '600', fontSize: '1rem', cursor: 'pointer' } } }
+        ]
+      },
+      // FEATURES GRID
+      {
+        id: 'saas-features', type: 'Container', props: { styles: { padding: '6rem 4rem', backgroundColor: '#f9fafb' } },
+        children: [
+          { id: 'feat-head', type: 'Text', props: { text: 'Everything you need to succeed', styles: { fontSize: '2.5rem', fontWeight: '800', color: '#111827', textAlign: 'center', marginBottom: '3rem', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'feat-grid', type: 'Container', props: { styles: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' } }, children: [
+            { id: 'f1', type: 'Container', props: { styles: { padding: '2rem', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e7eb' } }, children: [
+              { id: 'f1-icon', type: 'Text', props: { text: '⚡', styles: { fontSize: '2rem', marginBottom: '1rem', display: 'block' } } },
+              { id: 'f1-t', type: 'Text', props: { text: 'Lightning Fast', styles: { fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' } } },
+              { id: 'f1-d', type: 'Text', props: { text: 'Built for speed and performance from the ground up.', styles: { color: '#6b7280', fontSize: '0.95rem', lineHeight: '1.6' } } }
+            ]},
+            { id: 'f2', type: 'Container', props: { styles: { padding: '2rem', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e7eb' } }, children: [
+              { id: 'f2-icon', type: 'Text', props: { text: '🔒', styles: { fontSize: '2rem', marginBottom: '1rem', display: 'block' } } },
+              { id: 'f2-t', type: 'Text', props: { text: 'Enterprise Security', styles: { fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' } } },
+              { id: 'f2-d', type: 'Text', props: { text: 'Bank-grade encryption to keep your data safe.', styles: { color: '#6b7280', fontSize: '0.95rem', lineHeight: '1.6' } } }
+            ]},
+            { id: 'f3', type: 'Container', props: { styles: { padding: '2rem', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e7eb' } }, children: [
+              { id: 'f3-icon', type: 'Text', props: { text: '📊', styles: { fontSize: '2rem', marginBottom: '1rem', display: 'block' } } },
+              { id: 'f3-t', type: 'Text', props: { text: 'Advanced Analytics', styles: { fontSize: '1.25rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' } } },
+              { id: 'f3-d', type: 'Text', props: { text: 'Track your growth with real-time dashboards.', styles: { color: '#6b7280', fontSize: '0.95rem', lineHeight: '1.6' } } }
+            ]}
+          ]}
+        ]
+      },
+      // CTA SECTION
+      {
+        id: 'saas-cta', type: 'Container', props: { styles: { padding: '6rem 4rem', backgroundColor: '#111827', textAlign: 'center' } },
+        children: [
+          { id: 'saas-cta-h2', type: 'Text', props: { text: 'Ready to scale?', styles: { fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: '800', color: '#ffffff', margin: '0', lineHeight: '1.1', fontFamily: 'Manrope, sans-serif' } } },
+          { id: 'saas-cta-btn', type: 'Button', props: { text: 'Get Started Today', styles: { backgroundColor: '#2563eb', color: '#ffffff', padding: '1.25rem 2.5rem', borderRadius: '8px', border: 'none', fontWeight: '700', fontSize: '1.1rem', cursor: 'pointer', marginTop: '2.5rem' } } }
+        ]
+      }
+    ]
+  },
+
   {
     id: 'blank',
     name: 'Blank Canvas',
