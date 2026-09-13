@@ -24,31 +24,47 @@ export default function SuperadminPanel() {
     return () => unsub();
   }, []);
 
-    const approveDomain = async (userId: string, domain: string) => {
-    // 1. Get the user's activeSiteId
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    const userData = userDoc.data();
-    const siteId = userData?.activeSiteId;
+     const approveDomain = async (userId: string, domain: string) => {
+    try {
+      // 1. Automatically add domain to Vercel
+      const vercelRes = await fetch('/api/provision-domain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain })
+      });
+      const vercelData = await vercelRes.json();
 
-    if (!siteId) {
-      alert("Client has not created a website yet!");
-      return;
+      if (!vercelData.success) {
+        alert("Failed to provision on Vercel: " + vercelData.error);
+        return;
+      }
+
+      // 2. Get the user's activeSiteId
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const siteId = userDoc.data()?.activeSiteId;
+
+      if (!siteId) {
+        alert("Client hasn't created a website yet! Vercel domain added, but no site mapped.");
+        return;
+      }
+
+      // 3. Automatically update Firestore User & Domains collection
+      await updateDoc(doc(db, 'users', userId), {
+        customDomain: domain,
+        domainStatus: 'live'
+      });
+
+      await setDoc(doc(db, 'domains', domain), {
+        siteId: siteId,
+        ownerId: userId
+      });
+
+      alert(`Success! ${domain} was automatically added to Vercel and mapped to the client's website.`);
+      
+    } catch (error) {
+      console.error("Automation Error:", error);
+      alert("An error occurred during automation.");
     }
-
-    // 2. Update the user's profile to 'live'
-    await updateDoc(doc(db, 'users', userId), {
-      customDomain: domain,
-      domainStatus: 'live'
-    });
-
-    // 3. AUTOMATION: Create a public routing record
-    // This allows the public to visit the domain without logging in
-    await setDoc(doc(db, 'domains', domain), {
-      siteId: siteId,
-      ownerId: userId
-    });
-
-    alert(`Domain ${domain} approved & mapped to site ${siteId}! Go to Vercel Dashboard -> Settings -> Domains to add it.`);
   };
 
   return (
