@@ -21,6 +21,7 @@ export default function ClientDashboard() {
   const [sites, setSites] = useState<ClientSite[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [domainRequest, setDomainRequest] = useState('');
+  const [domainTab, setDomainTab] = useState<'free' | 'branded'>('free');
   const [currentDomain, setCurrentDomain] = useState<string | null>(null);
   const [domainStatus, setDomainStatus] = useState<string | null>(null);
 
@@ -57,11 +58,24 @@ export default function ClientDashboard() {
     router.push(`/editor/${newSiteId}/page-home?template=${templateId}`);
   };
 
-  const handleDomainRequest = async () => {
+   const handleDomainRequest = async () => {
     if (!domainRequest || !user) return;
-    await updateDoc(doc(db, 'users', user.uid), { customDomainRequest: domainRequest, domainStatus: 'pending' });
+    
+    // Clean the input based on the selected tab
+    let finalDomain = domainRequest.trim();
+    if (domainTab === 'free') {
+      // Remove all spaces for the free domain slug
+      finalDomain = finalDomain.replace(/\s+/g, '');
+      finalDomain = `${finalDomain}.vercel.app`;
+    } else {
+      // Branded domain: just remove spaces
+      finalDomain = finalDomain.replace(/\s+/g, '');
+    }
+
+    // Save the cleaned domain to Firestore
+    await updateDoc(doc(db, 'users', user.uid), { customDomainRequest: finalDomain, domainStatus: 'pending' });
     setDomainStatus('pending');
-    alert('Domain request sent!');
+    alert(`Domain request sent for ${finalDomain}!`);
   };
 
   const handlePauseResume = async (siteId: string) => {
@@ -137,8 +151,26 @@ export default function ClientDashboard() {
         </div>
 
         {/* Domain Card */}
+                {/* Setup Domain Card */}
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 mb-12 max-w-2xl">
-          <h3 className="text-lg font-bold mb-1 flex items-center gap-2"><Globe size={18} /> Custom Domain</h3>
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Globe size={18} /> Setup Domain</h3>
+          
+          {/* Tabs */}
+          <div className="flex border-b border-neutral-800 mb-6">
+            <button 
+              onClick={() => { setDomainTab('free'); setDomainRequest(''); }} 
+              className={`pb-3 px-4 text-sm font-medium transition-colors ${domainTab === 'free' ? 'text-white border-b-2 border-blue-500' : 'text-neutral-500 hover:text-white'}`}
+            >
+              Free Domain
+            </button>
+            <button 
+              onClick={() => { setDomainTab('branded'); setDomainRequest(''); }} 
+              className={`pb-3 px-4 text-sm font-medium transition-colors ${domainTab === 'branded' ? 'text-white border-b-2 border-blue-500' : 'text-neutral-500 hover:text-white'}`}
+            >
+              Branded Domain
+            </button>
+          </div>
+
           {currentDomain ? (
             <div className="flex items-center gap-3 mt-3">
               <span className="font-mono text-sm bg-green-500/10 text-green-400 px-3 py-1.5 rounded-md border border-green-500/20">{currentDomain}</span>
@@ -150,9 +182,34 @@ export default function ClientDashboard() {
               <span className="text-yellow-400 text-xs flex items-center gap-1"><span className="h-2 w-2 bg-yellow-500 rounded-full animate-pulse"></span> Pending Approval</span>
             </div>
           ) : (
-            <div className="flex items-center gap-3 mt-3">
-              <input type="text" value={domainRequest} onChange={(e) => setDomainRequest(e.target.value)} placeholder="www.yourdomain.com" className="flex-1 bg-neutral-800 text-sm border border-neutral-700 p-2 rounded-md outline-none focus:border-blue-500" />
-              <button onClick={handleDomainRequest} className="bg-white text-black text-sm px-4 py-2 rounded-md font-medium hover:bg-neutral-200">Request</button>
+            <div className="mt-3">
+              {domainTab === 'free' ? (
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text" 
+                    value={domainRequest} 
+                    onChange={(e) => setDomainRequest(e.target.value.replace(/\s+/g, ''))} 
+                    placeholder="yourname" 
+                    className="flex-1 bg-neutral-800 text-sm border border-neutral-700 p-2 rounded-l-md outline-none focus:border-blue-500"
+                  />
+                  <span className="bg-neutral-700 text-neutral-400 text-sm p-2 rounded-r-md border border-neutral-700">.vercel.app</span>
+                  <button onClick={handleDomainRequest} className="bg-white text-black text-sm px-4 py-2 rounded-md font-medium hover:bg-neutral-200 ml-2">Request</button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text" 
+                    value={domainRequest} 
+                    onChange={(e) => setDomainRequest(e.target.value)} 
+                    placeholder="www.yourdomain.com" 
+                    className="flex-1 bg-neutral-800 text-sm border border-neutral-700 p-2 rounded-md outline-none focus:border-blue-500"
+                  />
+                  <button onClick={handleDomainRequest} className="bg-white text-black text-sm px-4 py-2 rounded-md font-medium hover:bg-neutral-200 ml-2">Request</button>
+                </div>
+              )}
+              <p className="text-neutral-600 text-xs mt-3">
+                {domainTab === 'free' ? 'Get a free subdomain instantly. No DNS setup required.' : 'Connect a domain you already own. Requires DNS setup.'}
+              </p>
             </div>
           )}
         </div>
