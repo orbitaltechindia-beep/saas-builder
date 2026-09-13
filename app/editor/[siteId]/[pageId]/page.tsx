@@ -11,7 +11,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { TEMPLATES } from '@/lib/templates';
 import { Node } from '@/types';
 import { db } from '@/lib/firebase/client';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
   const resolvedParams = React.use(params);
@@ -30,21 +30,36 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   const searchParams = useSearchParams();
   const [saveStatus, setSaveStatus] = useState('');
 
-  useEffect(() => {
+   useEffect(() => {
     setIsMounted(true);
     
-    // Load from Firestore on mount (we will add this next), 
-    // but for now fallback to localStorage or Template
-    const savedData = localStorage.getItem(`site_data_${siteId}`);
-    if (savedData) {
-      setNodes(JSON.parse(savedData));
-    } else {
-      const templateId = searchParams.get('template');
-      if (templateId) {
-        const template = TEMPLATES.find(t => t.id === templateId);
-        if (template) setNodes(template.pageData);
+    const fetchSiteData = async () => {
+      // 1. Check Firestore for saved cloud data
+      try {
+        const siteDoc = await getDoc(doc(db, 'sites', siteId));
+        if (siteDoc.exists() && siteDoc.data()?.pageData) {
+          setNodes(siteDoc.data().pageData);
+          return; // Exit if we found cloud data
+        }
+      } catch (error) {
+        console.log("No cloud data yet, loading template...");
       }
-    }
+
+      // 2. Fallback to localStorage (for fast loading)
+      const savedData = localStorage.getItem(`site_data_${siteId}`);
+      if (savedData) {
+        setNodes(JSON.parse(savedData));
+      } else {
+        // 3. Fallback to Template (if it's a brand new site)
+        const templateId = searchParams.get('template');
+        if (templateId) {
+          const template = TEMPLATES.find(t => t.id === templateId);
+          if (template) setNodes(template.pageData);
+        }
+      }
+    };
+
+    fetchSiteData();
   }, [searchParams, siteId, setNodes]);
 
   // Keyboard Shortcuts
