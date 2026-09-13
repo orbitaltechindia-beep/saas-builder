@@ -67,17 +67,22 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, moveComponent, removeComponent, duplicateComponent]);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && (over.id === 'canvas-root' || over.id !== active.id)) {
       const type = active.data.current?.type as Node['type'];
       if (active.id.toString().startsWith('drag-')) {
-        let newNode: Node;
+        let newNode: Node | undefined = undefined;
 
-        if (type === 'Text') newNode = { id: uuidv4(), type: 'Text', props: { text: 'Edit this text', styles: { color: '#111111' } } };
-        else if (type === 'Button') newNode = { id: uuidv4(), type: 'Button', props: { text: 'Click Me' } };
-        else if (type === 'Image') newNode = { id: uuidv4(), type: 'Image', props: {} };
-        else if (type === 'Container') newNode = { id: uuidv4(), type: 'Container', props: {}, children: [] };
+        if (type === 'Text') {
+          newNode = { id: uuidv4(), type: 'Text', props: { text: 'Edit this text', styles: { color: '#111111' } } };
+        } else if (type === 'Button') {
+          newNode = { id: uuidv4(), type: 'Button', props: { text: 'Click Me' } };
+        } else if (type === 'Image') {
+          newNode = { id: uuidv4(), type: 'Image', props: {} };
+        } else if (type === 'Container') {
+          newNode = { id: uuidv4(), type: 'Container', props: {}, children: [] };
+        }
         
         if (newNode) {
           addComponent(newNode);
@@ -85,7 +90,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       }
     }
   };
-
   const handleSave = () => {
     localStorage.setItem(`site_data_${siteId}`, JSON.stringify(nodes));
     setSaveStatus('Saved!');
