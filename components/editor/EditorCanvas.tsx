@@ -42,10 +42,9 @@ export default function EditorCanvas() {
         }}
         onClick={() => selectComponent(null)}
       >
-        <div 
+                <div 
           ref={setNodeRef} 
-          className={`bg-white shadow-2xl transition-all duration-300 min-h-[800px] ${isOver ? 'ring-4 ring-blue-500 ring-offset-4 ring-offset-neutral-950' : ''}`}
-          style={{ width: deviceWidths[device], maxWidth: '100%' }}
+          className={`bg-white shadow-2xl transition-all duration-300 min-h-[800px] w-full ${isOver ? 'ring-4 ring-blue-500 ring-offset-4 ring-offset-neutral-950' : ''}`}
         >
           {nodes.length === 0 ? (
             <div className="h-[800px] w-full flex items-center justify-center text-neutral-300 font-medium">

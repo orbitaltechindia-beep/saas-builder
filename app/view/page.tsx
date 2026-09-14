@@ -45,9 +45,14 @@ export default function PublicDomainPage() {
     return <div className="h-screen flex items-center justify-center bg-white text-neutral-400">Site not published yet.</div>;
   }
 
-  return (
-    <div className="min-h-screen bg-white">
-      {nodes.map(node => <PublicNodeRenderer key={node.id} node={node} />)}
+   return (
+    <div className="min-h-screen bg-white flex flex-col">
+      <div className="flex-1">
+        {nodes.map(node => <PublicNodeRenderer key={node.id} node={node} />)}
+      </div>
+      <footer className="bg-black text-white text-center p-4 text-xs font-mono w-full">
+        Developed By Orbital Technologies
+      </footer>
     </div>
   );
 }

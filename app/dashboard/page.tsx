@@ -146,6 +146,7 @@ export default function ClientDashboard() {
         await setDoc(doc(db, 'sites', newSiteId), { 
           pageData: data.nodes, 
           title: aiTitle,
+           status: 'live', 
           updatedAt: new Date() 
         });
         

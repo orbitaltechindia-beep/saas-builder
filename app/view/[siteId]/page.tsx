@@ -45,9 +45,14 @@ export default function PublicSitePage({ params }: { params: Promise<{ siteId: s
     );
   }
 
-  return (
-    <div className="min-h-screen bg-white">
-      {nodes.map((node) => <PublicNodeRenderer key={node.id} node={node} />)}
+    return (
+    <div className="min-h-screen bg-white flex flex-col">
+      <div className="flex-1">
+        {nodes.map((node) => <PublicNodeRenderer key={node.id} node={node} />)}
+      </div>
+      <footer className="bg-black text-white text-center p-4 text-xs font-mono w-full">
+        Developed By Orbital Technologies
+      </footer>
     </div>
   );
 }
