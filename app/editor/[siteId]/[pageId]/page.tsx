@@ -10,11 +10,11 @@ import InspectorPanel from '@/components/editor/InspectorPanel';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TEMPLATES } from '@/lib/templates';
 import { Node } from '@/types';
-import Draggable from 'react-draggable';
 import { db, auth } from '@/lib/firebase/client';
 import { doc, setDoc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Sparkles, Trash2, Edit3 } from 'lucide-react';
+import Draggable from 'react-draggable';
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
   const resolvedParams = React.use(params);
@@ -249,8 +249,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     }
   };
 
-  // 8. AI Followup Edit (Client-Side Quota & Crash Protection)
-   // Helper to fix AI malformed data
+  // Helper to fix AI malformed data
   const sanitizeNodes = (nodes: any[]): Node[] => {
     if (!Array.isArray(nodes)) return [];
     return nodes.map(node => {
@@ -269,6 +268,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     });
   };
 
+  // 8. AI Followup Edit (Client-Side Quota & Crash Protection)
   const handleAiEdit = async () => {
     if (!aiPrompt) return;
 
@@ -289,7 +289,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       // CRITICAL: Sanitize AI data and verify it's an array
       if (data.success && Array.isArray(data.nodes)) {
         const cleanNodes = sanitizeNodes(data.nodes);
-        setNodes(cleanNodes);
+        setNodes(cleanNodes); // This updates the Zustand store and re-renders the canvas
         setAiPrompt('');
         
         if (auth.currentUser) {
@@ -330,7 +330,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
             View Live Site ↗
           </a>
           
-          {/* Page Manager Dropdown (Fixed Gap) */}
+          {/* Page Manager Dropdown */}
           <div className="relative group">
             <button className="text-neutral-300 hover:text-white text-sm bg-neutral-800 px-3 py-1.5 rounded flex items-center gap-2">
               Page: {pages.find(p => p.id === pageId)?.name || pageId} ▾
@@ -402,10 +402,9 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         </div>
       </DndContext>
 
-      {/* Floating AI Followup Assistant */}
-      {/* Floating AI Followup Assistant */}
-      <Draggable handle=".drag-handle" bounds="parent">
-        <div className="fixed bottom-6 right-6 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4 w-80 cursor-default">
+      {/* Floating AI Followup Assistant (Draggable) */}
+      <Draggable handle=".drag-handle">
+        <div className="fixed bottom-6 right-6 z-[100] bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4 w-80 cursor-default">
           <div className="drag-handle cursor-move flex items-center justify-between mb-2">
             <h3 className="text-white text-sm font-bold flex items-center gap-2">
               <Sparkles size={14} className="text-blue-400" /> AI Followup

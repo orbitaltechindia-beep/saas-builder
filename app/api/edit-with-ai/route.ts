@@ -4,14 +4,14 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 export async function POST(req: Request) {
   const { prompt, currentNodes } = await req.json();
 
-  try {
+   try {
     const systemPrompt = `You are an elite front-end developer. The user has a JSON array of their current website "Node" objects and wants to modify it. Output ONLY the modified JSON array. No markdown.`;
 
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const result = await model.generateContent([
       { text: systemPrompt },
@@ -19,10 +19,22 @@ export async function POST(req: Request) {
     ]);
 
     let content = result.response.text();
+    
+    // Bulletproof JSON extraction
     const jsonStart = content.indexOf('[');
     const jsonEnd = content.lastIndexOf(']');
     if (jsonStart !== -1 && jsonEnd !== -1) {
       content = content.substring(jsonStart, jsonEnd + 1);
+    } else {
+      // If no array brackets found, try to parse as object and wrap in array
+      try {
+        const parsedObj = JSON.parse(content);
+        if (parsedObj.nodes && Array.isArray(parsedObj.nodes)) {
+          content = JSON.stringify(parsedObj.nodes);
+        }
+      } catch (e) {
+        // Ignore, just try to parse the original content
+      }
     }
 
     const parsedNodes = JSON.parse(content);
