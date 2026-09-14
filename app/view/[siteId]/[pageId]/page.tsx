@@ -1,0 +1,78 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { db } from '@/lib/firebase/client';
+import { doc, getDoc } from 'firebase/firestore';
+import { PublicNodeRenderer } from '@/components/renderers/PublicNodeRenderer';
+import { Node } from '@/types';
+
+export default function PublicSitePage({ params }: { params: Promise<{ siteId: string, pageId: string }> }) {
+  const resolvedParams = React.use(params);
+  const { siteId, pageId } = resolvedParams;
+  const [nodes, setNodes] = useState<Node[] | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    const fetchSiteData = async () => {
+      try {
+        const siteDoc = await getDoc(doc(db, 'sites', siteId));
+        if (siteDoc.exists()) {
+          const data = siteDoc.data();
+          
+          // Check if site is paused
+          if (data.status === 'paused') {
+            setIsPaused(true);
+            setNodes([]);
+            return;
+          }
+
+          // Determine which page data to load (home vs about-us)
+          const pageKey = pageId === 'home' ? 'pageData' : `pageData_${pageId}`;
+          setNodes(data[pageKey] || []);
+        } else {
+          setNodes([]);
+        }
+      } catch (error) {
+        console.error("Error fetching site:", error);
+        setNodes([]);
+      }
+    };
+    fetchSiteData();
+  }, [siteId, pageId]);
+
+  if (isPaused) {
+    return (
+      <div className="h-screen bg-neutral-950 flex items-center justify-center text-white p-4">
+        <div className="text-center max-w-md">
+          <div className="h-16 w-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold mb-3">Site Under Maintenance</h1>
+          <p className="text-neutral-400 mb-8">We are currently performing scheduled updates to improve your experience. Please check back soon!</p>
+          <div className="text-xs text-neutral-600 font-mono">Developed By Orbital Technologies</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (nodes === null) {
+    return <div className="h-screen flex items-center justify-center bg-white text-neutral-400">Loading site...</div>;
+  }
+
+  if (nodes.length === 0) {
+    return <div className="h-screen flex items-center justify-center bg-white text-neutral-400">Site not published yet.</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-white flex flex-col">
+      <div className="flex-1">
+        {nodes.map((node) => <PublicNodeRenderer key={node.id} node={node} />)}
+      </div>
+      <footer className="bg-black text-white text-center p-4 text-xs font-mono w-full">
+        Developed By Orbital Technologies
+      </footer>
+    </div>
+  );
+}
