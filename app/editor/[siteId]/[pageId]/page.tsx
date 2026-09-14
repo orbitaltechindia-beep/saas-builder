@@ -14,7 +14,7 @@ import { db, auth } from '@/lib/firebase/client';
 import { doc, setDoc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Sparkles, Trash2, Edit3 } from 'lucide-react';
-import Draggable from 'react-draggable';
+
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
   const resolvedParams = React.use(params);
@@ -405,32 +405,30 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
 
       {/* Floating AI Followup Assistant (Draggable) */}
             {/* Floating AI Followup Assistant (Draggable) */}
-      <Draggable handle=".drag-handle" bounds="body">
-        <div className="fixed bottom-6 right-6 z-[100] bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4 w-80 cursor-default select-none">
-          <div className="drag-handle cursor-move flex items-center justify-between mb-2 p-1 -m-1">
-            <h3 className="text-white text-sm font-bold flex items-center gap-2 pointer-events-none">
-              <Sparkles size={14} className="text-blue-400" /> AI Followup
-            </h3>
-            <span className="text-neutral-500 text-xs pointer-events-none">⋮⋮</span>
-          </div>
-          <textarea 
-            value={aiPrompt}
-            onChange={(e) => setAiPrompt(e.target.value)}
-            placeholder="e.g., Make the hero darker, or add a pricing section..."
-            className="w-full bg-neutral-800 text-white text-xs p-2 rounded border border-neutral-700 outline-none focus:border-blue-500 resize-none h-20"
-          />
-          <div className="text-[10px] text-neutral-500 mt-1 mb-2 text-right">
-            Edits used today: {aiLimits.followups}/{aiLimits.followupLimit}
-          </div>
-          <button 
-            onClick={handleAiEdit} 
-            disabled={isAiEditing}
-            className="w-full bg-blue-600 text-white text-xs py-2 rounded mt-1 hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isAiEditing ? 'Modifying...' : 'Update with AI ✨'}
-          </button>
+            {/* Fixed AI Followup Assistant (Right Side, 40% from bottom) */}
+      <div className="fixed bottom-40 right-6 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4 w-80">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-white text-sm font-bold flex items-center gap-2">
+            <Sparkles size={14} className="text-blue-400" /> AI Followup
+          </h3>
         </div>
-      </Draggable>
+        <textarea 
+          value={aiPrompt}
+          onChange={(e) => setAiPrompt(e.target.value)}
+          placeholder="e.g., Make the hero darker, or add a pricing section..."
+          className="w-full bg-neutral-800 text-white text-xs p-2 rounded border border-neutral-700 outline-none focus:border-blue-500 resize-none h-20"
+        />
+        <div className="text-[10px] text-neutral-500 mt-1 mb-2 text-right">
+          Edits used today: {aiLimits.followups}/{aiLimits.followupLimit}
+        </div>
+        <button 
+          onClick={handleAiEdit} 
+          disabled={isAiEditing}
+          className="w-full bg-blue-600 text-white text-xs py-2 rounded mt-1 hover:bg-blue-700 disabled:opacity-50"
+        >
+          {isAiEditing ? 'Modifying...' : 'Update with AI ✨'}
+        </button>
+      </div>
     </div>
   );
 }
