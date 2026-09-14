@@ -242,10 +242,10 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     if (!aiPrompt) return;
     setIsAiEditing(true);
     try {
-      const res = await fetch('/api/edit-with-ai', {
+            const res = await fetch('/api/edit-with-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: aiPrompt, currentNodes: nodes })
+        body: JSON.stringify({ prompt: aiPrompt, currentNodes: nodes, userId: auth.currentUser?.uid })
       });
       const data = await res.json();
       if (data.success) {

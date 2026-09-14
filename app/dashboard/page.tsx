@@ -33,6 +33,9 @@ export default function ClientDashboard() {
   const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
   const [globalTemplates, setGlobalTemplates] = useState<any[]>([]);
   const [selectedModules, setSelectedModules] = useState<string[]>(['Courses', 'Results', 'Testimonials']);
+  
+  // AI Quota State
+  const [aiLimits, setAiLimits] = useState({ websites: 0, websiteLimit: 3, followups: 0, followupLimit: 12, requestPending: false });
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -46,6 +49,19 @@ export default function ClientDashboard() {
         setDomainStatus(data.domainStatus || null);
         setDomainRequest(data.customDomainRequest || '');
         setActiveSiteId(data.activeSiteId || null);
+
+        // Fetch AI Quota Limits
+        const today = new Date().toDateString();
+        const lastReset = data.lastAiReset?.toDate().toDateString();
+        const isSameDay = today === lastReset;
+        
+        setAiLimits({
+          websites: isSameDay ? (data.aiWebsitesUsed || 0) : 0,
+          websiteLimit: data.aiWebsiteLimit || 3,
+          followups: isSameDay ? (data.aiFollowupsUsed || 0) : 0,
+          followupLimit: data.aiFollowupLimit || 12,
+          requestPending: data.followupIncreaseRequest || false
+        });
       }
       
       const saved = localStorage.getItem(`saas_sites_${firebaseUser.uid}`);
@@ -161,9 +177,16 @@ export default function ClientDashboard() {
       const res = await fetch('/api/generate-ai-site', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: aiPrompt, modules: selectedModules })
+        body: JSON.stringify({ prompt: aiPrompt, modules: selectedModules, userId: user.uid })
       });
       const data = await res.json();
+      
+      if (res.status === 429) {
+        alert(data.error);
+        setIsGenerating(false);
+        return;
+      }
+      
       if (data.success) {
         const newSiteId = `site-${Date.now()}`;
         const aiTitle = aiPrompt.substring(0, 20) + (aiPrompt.length > 20 ? "..." : "") + " (AI)";
@@ -186,6 +209,9 @@ export default function ClientDashboard() {
           updatedAt: new Date() 
         });
         
+        // Increment local quota UI
+        setAiLimits(prev => ({ ...prev, websites: prev.websites + 1 }));
+
         const newSite = { id: newSiteId, name: aiTitle, template: 'ai-generated', status: 'live' };
         const updatedSites = [...sites, newSite];
         setSites(updatedSites);
@@ -272,10 +298,31 @@ export default function ClientDashboard() {
           <button 
             onClick={handleGenerateAI} 
             disabled={isGenerating}
-            className="bg-white text-blue-700 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition-colors disabled:opacity-50"
+            className="bg-white text-blue-700 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition-colors disabled:opacity-50 w-full md:w-auto"
           >
             {isGenerating ? 'Generating...' : 'Generate ✨'}
           </button>
+
+          {/* AI Usage & Request */}
+          <div className="flex flex-wrap items-center justify-between mt-4 text-xs text-blue-100 gap-4">
+            <span>Websites: {aiLimits.websites}/{aiLimits.websiteLimit} used today</span>
+            <span>Edits: {aiLimits.followups}/{aiLimits.followupLimit} used today</span>
+            {aiLimits.requestPending ? (
+              <span className="text-yellow-300 font-medium">Request pending...</span>
+            ) : (
+              <button 
+                onClick={async () => {
+                  if (!user) return;
+                  await updateDoc(doc(db, 'users', user.uid), { followupIncreaseRequest: 'Requesting more followups' });
+                  setAiLimits({ ...aiLimits, requestPending: true });
+                  alert("Request sent to Superadmin!");
+                }}
+                className="text-white underline hover:text-blue-50 font-medium"
+              >
+                Request More Edits
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Setup Domain Card */}

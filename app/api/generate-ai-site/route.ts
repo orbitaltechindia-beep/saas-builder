@@ -1,28 +1,37 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { db } from '@/lib/firebase/client';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 export async function POST(req: Request) {
-  const { prompt, modules } = await req.json();
-
-  const systemPrompt = `You are an elite front-end developer and AI assistant inside a website builder.
-  Output ONLY a valid JSON array of "Node" objects for the HOME PAGE. No markdown.
-  
-  Interface Node {
-    id: string;
-    type: 'Container' | 'Text' | 'Image' | 'Button' | 'Link' | 'Form' | 'Video' | 'Divider' | 'Spacer' | 'Icon';
-    props: { text?: string; href?: string; src?: string; styles?: React.CSSProperties };
-    children?: Node[];
-  }
-  
-  Rules:
-  1. Use modern, premium aesthetics (dark mode, flexbox, grid).
-  2. Use inline styles heavily (padding, backgroundColor, color, fontSize, display, justifyContent, alignItems, borderRadius).
-  3. Generate unique string IDs.
-  4. The user has requested the following modules: ${modules.join(', ')}.
-  5. ONLY include sections for the requested modules. Do NOT include modules that were not selected.
-  6. Always include a Hero section and a Footer.`;
+  const { prompt, modules, userId } = await req.json();
 
   try {
+    // 1. Check Quota
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    const userData = userDoc.data() || {};
+
+    // Reset if it's a new day
+    const lastReset = userData.lastAiReset?.toDate() || new Date(0);
+    const today = new Date();
+    const isSameDay = lastReset.toDateString() === today.toDateString();
+
+    let websitesUsed = isSameDay ? (userData.aiWebsitesUsed || 0) : 0;
+    let followupsUsed = isSameDay ? (userData.aiFollowupsUsed || 0) : 0;
+    const websiteLimit = userData.aiWebsiteLimit || 3; // Default 3
+
+    if (websitesUsed >= websiteLimit) {
+      return NextResponse.json({ 
+        error: `Daily limit reached (${websitesUsed}/${websiteLimit}). Try again tomorrow or request more from Superadmin.` 
+      }, { status: 429 });
+    }
+
+    // 2. Generate Site
+    const systemPrompt = `You are an elite front-end developer. Output ONLY a valid JSON array of "Node" objects. No markdown.
+    Interface Node { id: string; type: 'Container' | 'Text' | 'Image' | 'Button' | 'Link' | 'Form'; props: { text?: string; href?: string; styles?: React.CSSProperties }; children?: Node[]; }
+    Rules: 1. Premium aesthetics. 2. Inline styles. 3. Unique IDs. 4. Include modules: ${modules.join(', ')}.`;
+
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
 
@@ -31,7 +40,7 @@ export async function POST(req: Request) {
 
     const result = await model.generateContent([
       { text: systemPrompt },
-      { text: `Institute Info: ${prompt}\n\nGenerate the JSON array for the home page.` }
+      { text: `Institute Info: ${prompt}\n\nGenerate the JSON array.` }
     ]);
 
     let content = result.response.text();
@@ -42,6 +51,14 @@ export async function POST(req: Request) {
     }
 
     const parsedNodes = JSON.parse(content);
+
+    // 3. Increment Quota
+    await updateDoc(userRef, {
+      aiWebsitesUsed: websitesUsed + 1,
+      lastAiReset: today,
+      followupIncreaseRequest: null // Clear any pending requests if they generate successfully
+    });
+
     return NextResponse.json({ success: true, nodes: parsedNodes });
   } catch (error: any) {
     console.error("AI Error:", error);

@@ -76,7 +76,14 @@ export default function SuperadminPanel() {
     await updateDoc(doc(db, 'users', userId), { approved: true });
     alert("User approved! They can now log in.");
   };
-
+  const approveMoreEdits = async (userId: string) => {
+    // Increase limit by 10 (or whatever you want)
+    await updateDoc(doc(db, 'users', userId), {
+      aiFollowupLimit: 22, // 12 + 10
+      followupIncreaseRequest: null
+    });
+    alert("Increased edit limit by 10 for this client!");
+  };
   // 4. Approve & Automate Domain
   const approveDomain = async (userId: string, domain: string) => {
     try {
@@ -227,27 +234,27 @@ export default function SuperadminPanel() {
                         <span className="text-neutral-600 text-sm">—</span>
                       )}
                     </td>
-                    <td className="p-5 text-right">
-                      {!user.approved && user.role === 'admin' && (
-                        <button 
-                          onClick={() => approveUser(user.id)} 
-                          className="bg-blue-600 text-white px-3 py-1.5 text-xs rounded-lg mr-2 hover:bg-blue-700 inline-flex items-center gap-1"
-                        >
-                          <UserCheck size={12} /> Approve User
-                        </button>
-                      )}
-                      
-                      {user.customDomainRequest && user.domainStatus !== 'live' ? (
-                        <button 
-                          onClick={() => approveDomain(user.id, user.customDomainRequest!)} 
-                          className="bg-green-600 text-white px-4 py-2 text-xs rounded-lg inline-flex items-center gap-1 hover:bg-green-700"
-                        >
-                          <Check size={12} /> Approve Domain
-                        </button>
-                      ) : (
-                        (user.approved || user.role === 'superadmin') && <span className="text-neutral-600 text-sm">—</span>
-                      )}
-                    </td>
+                                      <td className="p-5 text-right">
+                    {!user.approved && user.role === 'admin' && (
+                      <button onClick={() => approveUser(user.id)} className="bg-blue-600 text-white px-3 py-1.5 text-xs rounded-lg mr-2 hover:bg-blue-700 inline-flex items-center gap-1">
+                        <UserCheck size={12} /> Approve User
+                      </button>
+                    )}
+                    
+                    {user.followupIncreaseRequest && (
+                      <button onClick={() => approveMoreEdits(user.id)} className="bg-purple-600 text-white px-3 py-1.5 text-xs rounded-lg mr-2 hover:bg-purple-700 inline-flex items-center gap-1">
+                        <Sparkles size={12} /> Approve More Edits
+                      </button>
+                    )}
+
+                    {user.customDomainRequest && user.domainStatus !== 'live' ? (
+                      <button onClick={() => approveDomain(user.id, user.customDomainRequest!)} className="bg-green-600 text-white px-4 py-2 text-xs rounded-lg inline-flex items-center gap-1 hover:bg-green-700">
+                        <Check size={12} /> Approve Domain
+                      </button>
+                    ) : (
+                      (user.approved || user.role === 'superadmin') && <span className="text-neutral-600 text-sm">—</span>
+                    )}
+                  </td>
                   </tr>
                 ))}
               </tbody>

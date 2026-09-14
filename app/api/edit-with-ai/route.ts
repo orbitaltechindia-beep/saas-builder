@@ -1,43 +1,46 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { db } from '@/lib/firebase/client';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 export async function POST(req: Request) {
-  const { prompt, currentNodes } = await req.json();
-
-  const systemPrompt = `You are an elite front-end developer and AI assistant inside a website editor.
-  The user has provided a JSON array of their current website "Node" objects, and a prompt asking you to modify it.
-  
-  You must output ONLY the modified JSON array of "Node" objects. No markdown, no explanations.
-  
-  Interface Node {
-    id: string;
-    type: 'Container' | 'Text' | 'Image' | 'Button' | 'Link' | 'Form' | 'Video' | 'Divider' | 'Spacer' | 'Icon';
-    props: { text?: string; href?: string; src?: string; styles?: React.CSSProperties };
-    children?: Node[];
-  }
-  
-  Rules:
-  1. Keep existing IDs where possible, but generate unique string IDs for any NEW elements you add.
-  2. Use modern, premium aesthetics (dark mode, flexbox, grid).
-  3. Use inline styles heavily (padding, backgroundColor, color, fontSize, display, justifyContent, alignItems, borderRadius).
-  4. If the user asks to make something longer, add more sections or elements.
-  5. If the user asks to change a color, find the relevant elements and change their backgroundColor or color.`;
+  const { prompt, currentNodes, userId } = await req.json();
 
   try {
+    // 1. Check Quota
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    const userData = userDoc.data() || {};
+
+    const lastReset = userData.lastAiReset?.toDate() || new Date(0);
+    const today = new Date();
+    const isSameDay = lastReset.toDateString() === today.toDateString();
+
+    let websitesUsed = isSameDay ? (userData.aiWebsitesUsed || 0) : 0;
+    let followupsUsed = isSameDay ? (userData.aiFollowupsUsed || 0) : 0;
+    const followupLimit = userData.aiFollowupLimit || 12; // Default 12
+
+    if (followupsUsed >= followupLimit) {
+      return NextResponse.json({ 
+        error: `Daily edit limit reached (${followupsUsed}/${followupLimit}). Try again tomorrow.` 
+      }, { status: 429 });
+    }
+
+    // 2. Edit Site
+    const systemPrompt = `You are an elite front-end developer. The user has a JSON array of their current website "Node" objects and wants to modify it. Output ONLY the modified JSON array. No markdown.`;
+
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Updated model name to gemini-3.6-flash
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const result = await model.generateContent([
       { text: systemPrompt },
-      { text: `Current Nodes JSON: \n${JSON.stringify(currentNodes)}\n\nUser Instruction: ${prompt}` }
+      { text: `Current Nodes: \n${JSON.stringify(currentNodes)}\n\nInstruction: ${prompt}` }
     ]);
 
     let content = result.response.text();
-    
     const jsonStart = content.indexOf('[');
     const jsonEnd = content.lastIndexOf(']');
     if (jsonStart !== -1 && jsonEnd !== -1) {
@@ -45,6 +48,13 @@ export async function POST(req: Request) {
     }
 
     const parsedNodes = JSON.parse(content);
+
+    // 3. Increment Quota
+    await updateDoc(userRef, {
+      aiFollowupsUsed: followupsUsed + 1,
+      lastAiReset: today
+    });
+
     return NextResponse.json({ success: true, nodes: parsedNodes });
   } catch (error: any) {
     console.error("AI Edit Error:", error);
