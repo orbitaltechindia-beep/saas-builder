@@ -11,7 +11,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { TEMPLATES } from '@/lib/templates';
 import { Node } from '@/types';
 import { db, auth } from '@/lib/firebase/client';
-import { doc, setDoc, getDoc, updateDoc, deleteField, onAuthStateChanged } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { Sparkles, Trash2, Edit3 } from 'lucide-react';
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
