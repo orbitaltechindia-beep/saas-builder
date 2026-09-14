@@ -48,14 +48,8 @@ export function PublicNodeRenderer({ node }: { node: Node }) {
     return <a href={node.props.href} style={currentStyles}>{node.props.text}</a>;
   }
 
-  if (node.type === 'Form') {
-    return (
-      <form style={currentStyles} onSubmit={(e) => e.preventDefault()} className="w-full">
-        <input type="text" placeholder="Name" className="w-full p-2 border border-neutral-300 rounded mb-2" />
-        <input type="email" placeholder="Email" className="w-full p-2 border border-neutral-300 rounded mb-2" />
-        <button type="submit" className="bg-blue-600 text-white p-2 rounded font-medium w-full">Submit</button>
-      </form>
-    );
+    if (node.type === 'Form') {
+    return <PublicForm node={node} />;
   }
 
   if (node.type === 'Container') {
@@ -69,4 +63,61 @@ export function PublicNodeRenderer({ node }: { node: Node }) {
   }
 
   return null;
+}
+import { db } from '@/lib/firebase/client';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useState } from 'react';
+
+function PublicForm({ node }: { node: Node }) {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
+  const currentStyles = node.props.styles || {};
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('loading');
+    const formData = new FormData(e.target as HTMLFormElement);
+    const data = Object.fromEntries(formData.entries());
+    
+    try {
+      // Save to Firestore 'enquiries' collection
+      await addDoc(collection(db, 'enquiries'), {
+        ...data,
+        source: window.location.hostname, // Which domain it came from
+        status: 'New',
+        createdAt: serverTimestamp()
+      });
+      setStatus('success');
+    } catch (error) {
+      console.error("Form submission error:", error);
+      alert("Error submitting form.");
+      setStatus('idle');
+    }
+  };
+
+  if (status === 'success') {
+    return (
+      <div style={currentStyles} className="w-full text-center">
+        <h3 className="text-xl font-bold text-green-600 mb-2">Thank You!</h3>
+        <p className="text-gray-600">Our team will get in touch with you shortly.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={currentStyles} className="w-full">
+      <input type="text" name="name" placeholder="Name" required className="w-full p-2 border border-neutral-300 rounded mb-2" />
+      <input type="tel" name="phone" placeholder="Phone" required className="w-full p-2 border border-neutral-300 rounded mb-2" />
+      <input type="email" name="email" placeholder="Email" className="w-full p-2 border border-neutral-300 rounded mb-2" />
+      <select name="course" className="w-full p-2 border border-neutral-300 rounded mb-2">
+        <option value="">Select Course</option>
+        <option>JEE</option>
+        <option>NEET</option>
+        <option>Foundation</option>
+      </select>
+      <textarea name="message" placeholder="Message" className="w-full p-2 border border-neutral-300 rounded mb-2" rows={3}></textarea>
+      <button type="submit" disabled={status === 'loading'} className="bg-blue-600 text-white p-2 rounded font-medium w-full disabled:opacity-50">
+        {status === 'loading' ? 'Submitting...' : 'Submit Enquiry'}
+      </button>
+    </form>
+  );
 }
