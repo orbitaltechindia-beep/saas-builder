@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+// CRITICAL: Tell Vercel to allow up to 60 seconds for this AI request
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   const { prompt, currentNodes } = await req.json();
 
   try {
-    const systemPrompt = `You are an elite front-end developer. The user has a JSON array of their current website "Node" objects and wants to modify it. Output ONLY the modified JSON array. No markdown, no explanations.`;
+    const systemPrompt = `You are an elite front-end developer. The user has a JSON array of their current website "Node" objects and wants to modify it. Output ONLY the modified JSON array. No markdown.`;
 
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
@@ -13,14 +16,26 @@ export async function POST(req: Request) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
-    const result = await model.generateContent([
-      { text: systemPrompt },
-      { text: `Current Nodes: \n${JSON.stringify(currentNodes)}\n\nInstruction: ${prompt}` }
-    ]);
+    // Retry Logic: If Google fails with 503, wait 1 second and try again (up to 3 times)
+    const retryGenerate = async (attempt: number): Promise<any> => {
+      try {
+        const result = await model.generateContent([
+          { text: systemPrompt },
+          { text: `Current Nodes: \n${JSON.stringify(currentNodes)}\n\nInstruction: ${prompt}` }
+        ]);
+        return result.response.text();
+      } catch (err: any) {
+        if (attempt < 3 && (err?.status === 503 || err?.status === 500 || err?.message?.includes('503'))) {
+          console.log(`Attempt ${attempt} failed with 503. Retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 sec
+          return retryGenerate(attempt + 1);
+        }
+        throw err;
+      }
+    };
 
-    let content = result.response.text();
+    let content = await retryGenerate(1);
     
-    // Bulletproof JSON extraction
     const jsonStart = content.indexOf('[');
     const jsonEnd = content.lastIndexOf(']');
     if (jsonStart !== -1 && jsonEnd !== -1) {
@@ -37,11 +52,10 @@ export async function POST(req: Request) {
     try {
       parsedNodes = JSON.parse(content);
     } catch (parseError: any) {
-      console.error("JSON Parse Error in AI Edit. Raw content:", content);
       return NextResponse.json({ 
         success: false, 
         error: "Failed to parse AI JSON.",
-        details: "The AI returned malformed JSON that could not be parsed."
+        details: "The AI returned malformed JSON."
       }, { status: 500 });
     }
 
