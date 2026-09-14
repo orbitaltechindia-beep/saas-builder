@@ -12,18 +12,16 @@ export async function POST(req: Request) {
     const userDoc = await getDoc(userRef);
     const userData = userDoc.data() || {};
 
-    // Reset if it's a new day
     const lastReset = userData.lastAiReset?.toDate() || new Date(0);
     const today = new Date();
     const isSameDay = lastReset.toDateString() === today.toDateString();
 
     let websitesUsed = isSameDay ? (userData.aiWebsitesUsed || 0) : 0;
-    let followupsUsed = isSameDay ? (userData.aiFollowupsUsed || 0) : 0;
-    const websiteLimit = userData.aiWebsiteLimit || 3; // Default 3
+    const websiteLimit = userData.aiWebsiteLimit || 3;
 
     if (websitesUsed >= websiteLimit) {
       return NextResponse.json({ 
-        error: `Daily limit reached (${websitesUsed}/${websiteLimit}). Try again tomorrow or request more from Superadmin.` 
+        error: `Daily limit reached (${websitesUsed}/${websiteLimit}). Try again tomorrow.` 
       }, { status: 429 });
     }
 
@@ -36,6 +34,7 @@ export async function POST(req: Request) {
     if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
 
     const genAI = new GoogleGenerativeAI(apiKey);
+    // Using the verified model from your list
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const result = await model.generateContent([
@@ -56,12 +55,16 @@ export async function POST(req: Request) {
     await updateDoc(userRef, {
       aiWebsitesUsed: websitesUsed + 1,
       lastAiReset: today,
-      followupIncreaseRequest: null // Clear any pending requests if they generate successfully
+      followupIncreaseRequest: null
     });
 
     return NextResponse.json({ success: true, nodes: parsedNodes });
   } catch (error: any) {
-    console.error("AI Error:", error);
-    return NextResponse.json({ error: "Failed to generate site", details: error.message }, { status: 500 });
+    // Log the EXACT error to Vercel logs
+    console.error("AI Generation Error Details:", error.message);
+    return NextResponse.json({ 
+      error: "Failed to generate site", 
+      details: error.message 
+    }, { status: 500 });
   }
 }
