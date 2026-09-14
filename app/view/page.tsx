@@ -10,35 +10,33 @@ function DomainViewerContent() {
   const [nodes, setNodes] = useState<Node[] | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   
-  useEffect(() => {
-    // Get the domain directly from the browser URL (e.g., infinityclasses.vercel.app)
+   useEffect(() => {
+    // Get domain and page path directly from browser
     const hostname = window.location.hostname;
+    const path = window.location.pathname;
+    const pageId = path === '/' ? 'home' : path.substring(1).replace(/\/$/, '');
     
     const fetchSite = async () => {
       try {
-        // 1. Look up the domain in the public 'domains' collection
         const domainDoc = await getDoc(doc(db, 'domains', hostname));
         
         if (domainDoc.exists()) {
           const siteId = domainDoc.data().siteId;
-          
-          // 2. Fetch the actual website document
           const siteDoc = await getDoc(doc(db, 'sites', siteId));
+          
           if (siteDoc.exists()) {
-            // 3. Check if site is paused
             if (siteDoc.data().status === 'paused') {
               setIsPaused(true);
               setNodes([]);
               return;
             }
             
-            // 4. Load the home page data
-            setNodes(siteDoc.data()?.pageData || []);
+            // Determine which page data to load based on URL
+            const pageKey = pageId === 'home' ? 'pageData' : `pageData_${pageId}`;
+            setNodes(siteDoc.data()?.[pageKey] || []);
             return;
           }
         }
-        
-        // If nothing found, show empty screen
         setNodes([]); 
       } catch (error) {
         console.error("Domain routing error:", error);
