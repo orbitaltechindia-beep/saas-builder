@@ -127,7 +127,7 @@ export default function ClientDashboard() {
     }
   };
 
-  const handleGenerateAI = async () => {
+    const handleGenerateAI = async () => {
     if (!aiPrompt || !user) return;
     setIsGenerating(true);
     try {
@@ -139,19 +139,17 @@ export default function ClientDashboard() {
       const data = await res.json();
       if (data.success) {
         const newSiteId = `site-${Date.now()}`;
-        // Create a title from the prompt
         const aiTitle = aiPrompt.substring(0, 20) + (aiPrompt.length > 20 ? "..." : "") + " (AI)";
         
-        // Save to Firestore with the title
+        // Save to Firestore with the title and status
         await setDoc(doc(db, 'sites', newSiteId), { 
           pageData: data.nodes, 
           title: aiTitle,
-           status: 'live', 
+          status: 'live', 
           updatedAt: new Date() 
         });
         
-        // Update activeSiteId
-        await updateDoc(doc(db, 'users', user.uid), { activeSiteId: newSiteId });
+        // REMOVED: await updateDoc(doc(db, 'users', user.uid), { activeSiteId: newSiteId });
         
         // Add to local dashboard state so it appears instantly
         const newSite = { id: newSiteId, name: aiTitle, template: 'ai-generated', status: 'live' };
@@ -168,7 +166,7 @@ export default function ClientDashboard() {
     }
     setIsGenerating(false);
   };
-
+  
   if (!user) return <div className="h-screen bg-neutral-950 flex items-center justify-center text-white">Loading...</div>;
 
   return (
@@ -293,7 +291,7 @@ export default function ClientDashboard() {
                     <button onClick={() => handleViewLive(site.id)} className="flex-1 bg-neutral-800 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-neutral-700">
                       <Eye size={14} /> View
                     </button>
-                    <button onClick={() => router.push(`/editor/${site.id}/page-home?template=${site.template}`)} className="flex-1 bg-blue-600 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-blue-700">
+                    <button onClick={() => router.push(`/editor/${site.id}/home?template=${site.template}`)} className="flex-1 bg-blue-600 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-blue-700">
                       <Settings size={14} /> Edit
                     </button>
                   </div>
