@@ -169,11 +169,28 @@ export default function ClientDashboard() {
       window.open(`/view/${siteId}/home`, '_blank');
     }
   };
+  // Helper to fix AI malformed data
+  const sanitizeNodes = (nodes: any[]): Node[] => {
+    if (!Array.isArray(nodes)) return [];
+    return nodes.map(node => {
+      const cleanNode: any = { ...node };
+      if (!cleanNode.props) cleanNode.props = {};
+      if (!cleanNode.props.styles) cleanNode.props.styles = {};
+      
+      if (cleanNode.type === 'Container') {
+        if (!cleanNode.children || !Array.isArray(cleanNode.children)) {
+          cleanNode.children = [];
+        } else {
+          cleanNode.children = sanitizeNodes(cleanNode.children);
+        }
+      }
+      return cleanNode;
+    });
+  };
 
   const handleGenerateAI = async () => {
     if (!aiPrompt || !user) return;
 
-    // 1. Check Quota Client-Side
     if (aiLimits.websites >= aiLimits.websiteLimit) {
       alert(`Daily limit reached (${aiLimits.websites}/${aiLimits.websiteLimit}). Try again tomorrow.`);
       return;
@@ -197,6 +214,9 @@ export default function ClientDashboard() {
       const newSiteId = `site-${Date.now()}`;
       const aiTitle = aiPrompt.substring(0, 20) + (aiPrompt.length > 20 ? "..." : "") + " (AI)";
       
+      // CRITICAL: Sanitize the AI data before saving
+      const cleanNodes = sanitizeNodes(data.nodes);
+      
       const corePages = [
         { id: 'home', name: 'Home' },
         { id: 'resources', name: 'Free Resources' },
@@ -205,18 +225,16 @@ export default function ClientDashboard() {
       ];
 
       await setDoc(doc(db, 'sites', newSiteId), { 
-        pageData: data.nodes, title: aiTitle, status: 'live', 
+        pageData: cleanNodes, title: aiTitle, status: 'live', 
         pages: corePages, pageData_resources: [], pageData_tests: [], pageData_notifications: [],
         updatedAt: new Date() 
       });
       
-      // 2. Increment Quota in Firestore
       await updateDoc(doc(db, 'users', user.uid), {
         aiWebsitesUsed: aiLimits.websites + 1,
         lastAiReset: new Date()
       });
 
-      // Update local UI
       setAiLimits(prev => ({ ...prev, websites: prev.websites + 1 }));
 
       const newSite = { id: newSiteId, name: aiTitle, template: 'ai-generated', status: 'live' };

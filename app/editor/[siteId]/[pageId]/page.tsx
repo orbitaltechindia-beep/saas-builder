@@ -249,6 +249,25 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   };
 
   // 8. AI Followup Edit (Client-Side Quota & Crash Protection)
+   // Helper to fix AI malformed data
+  const sanitizeNodes = (nodes: any[]): Node[] => {
+    if (!Array.isArray(nodes)) return [];
+    return nodes.map(node => {
+      const cleanNode: any = { ...node };
+      if (!cleanNode.props) cleanNode.props = {};
+      if (!cleanNode.props.styles) cleanNode.props.styles = {};
+      
+      if (cleanNode.type === 'Container') {
+        if (!cleanNode.children || !Array.isArray(cleanNode.children)) {
+          cleanNode.children = [];
+        } else {
+          cleanNode.children = sanitizeNodes(cleanNode.children);
+        }
+      }
+      return cleanNode;
+    });
+  };
+
   const handleAiEdit = async () => {
     if (!aiPrompt) return;
 
@@ -266,9 +285,10 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       });
       const data = await res.json();
       
-      // CRITICAL FIX: Ensure data.nodes is a valid array before setting it
+      // CRITICAL: Sanitize AI data and verify it's an array
       if (data.success && Array.isArray(data.nodes)) {
-        setNodes(data.nodes);
+        const cleanNodes = sanitizeNodes(data.nodes);
+        setNodes(cleanNodes);
         setAiPrompt('');
         
         if (auth.currentUser) {
