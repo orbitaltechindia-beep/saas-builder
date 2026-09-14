@@ -11,9 +11,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { TEMPLATES } from '@/lib/templates';
 import { Node } from '@/types';
 import { db, auth } from '@/lib/firebase/client';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
-import { Sparkles } from 'lucide-react';
+import { doc, setDoc, getDoc, updateDoc, deleteField, onAuthStateChanged } from 'firebase/firestore';
+import { Sparkles, Trash2, Edit3 } from 'lucide-react';
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
   const resolvedParams = React.use(params);
@@ -35,8 +34,10 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   const [saveStatus, setSaveStatus] = useState('');
 
   // Multi-Page State
-  const [pages, setPages] = useState<string[]>(['home']);
+  const [pages, setPages] = useState<{id: string, name: string}[]>([{ id: 'home', name: 'Home' }]);
   const [newPageName, setNewPageName] = useState('');
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   // AI Followup State
   const [aiPrompt, setAiPrompt] = useState('');
@@ -54,7 +55,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     return () => unsub();
   }, []);
 
-  // 2. Load Site Data (Multi-Page Aware)
+  // 2. Load Site Data & Pages List
   useEffect(() => {
     if (!siteId) return;
     
@@ -64,6 +65,11 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         if (siteDoc.exists()) {
           const data = siteDoc.data();
           
+          // Load Pages List
+          if (data.pages && data.pages.length > 0) {
+            setPages(data.pages);
+          }
+
           // Determine which page key to load
           const pageKey = pageId === 'home' ? 'pageData' : `pageData_${pageId}`;
           const loadedNodes = data[pageKey];
@@ -71,17 +77,15 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
           if (loadedNodes && loadedNodes.length > 0) {
             setNodes(loadedNodes);
           } else {
-            // Fallback to template if it's a new home page
             const templateId = searchParams.get('template');
             if (templateId && pageId === 'home') {
               const template = TEMPLATES.find(t => t.id === templateId);
               if (template) setNodes(template.pageData);
             } else {
-              setNodes([]); // Empty page for new sub-pages
+              setNodes([]);
             }
           }
         } else {
-          // Fallback to template if site doesn't exist in DB yet
           const templateId = searchParams.get('template');
           if (templateId) {
             const template = TEMPLATES.find(t => t.id === templateId);
@@ -103,19 +107,10 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
       if (!selectedNodeId) return;
 
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        moveComponent(selectedNodeId, 'up');
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        moveComponent(selectedNodeId, 'down');
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        removeComponent(selectedNodeId);
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
-        e.preventDefault();
-        duplicateComponent(selectedNodeId);
-      }
+      if (e.key === 'ArrowUp') { e.preventDefault(); moveComponent(selectedNodeId, 'up'); } 
+      else if (e.key === 'ArrowDown') { e.preventDefault(); moveComponent(selectedNodeId, 'down'); } 
+      else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeComponent(selectedNodeId); } 
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'd') { e.preventDefault(); duplicateComponent(selectedNodeId); }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -141,9 +136,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         else if (type === 'Link') newNode = { id: uuidv4(), type: 'Link', props: { text: 'Click Here', href: '#', styles: { color: '#3b82f6', textDecoration: 'underline' } } };
         else if (type === 'Form') newNode = { id: uuidv4(), type: 'Form', props: { styles: { display: 'flex', flexDirection: 'column', gap: '1rem', padding: '2rem', backgroundColor: '#f9fafb', borderRadius: '12px' } } };
         
-        if (newNode) {
-          addComponent(newNode);
-        }
+        if (newNode) addComponent(newNode);
       }
     }
   };
@@ -160,8 +153,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         updatedAt: new Date()
       }, { merge: true }); 
       
-      localStorage.setItem(`site_data_${siteId}_${pageId}`, JSON.stringify(cleanNodes));
-      
       setSaveStatus('Saved & Live!');
       setTimeout(() => setSaveStatus(''), 3000);
     } catch (error) {
@@ -171,15 +162,58 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     }
   };
 
-  // 6. Create New Page
+  // 6. Page Management (Add, Rename, Delete)
   const handleCreatePage = async () => {
-    if (!newPageName || !siteId) return;
-    const slug = newPageName.toLowerCase().replace(/\s+/g, '-');
-    if (!pages.includes(slug)) {
-      setPages([...pages, slug]);
-      await setDoc(doc(db, 'sites', siteId), { [`pageData_${slug}`]: [] }, { merge: true });
+    const name = newPageName.trim();
+    if (!name || !siteId) return;
+    const slug = name.toLowerCase().replace(/\s+/g, '-');
+    
+    if (!pages.find(p => p.id === slug)) {
+      const newPages = [...pages, { id: slug, name: name }];
+      setPages(newPages);
+      await updateDoc(doc(db, 'sites', siteId), { pages: newPages, [`pageData_${slug}`]: [] });
       router.push(`/editor/${siteId}/${slug}`);
       setNewPageName('');
+    }
+  };
+
+  const handleRenamePage = async (oldId: string) => {
+    const newName = renameValue.trim();
+    if (!newName || !siteId) return;
+    const newId = newName.toLowerCase().replace(/\s+/g, '-');
+    
+    if (oldId !== newId) {
+      const siteDoc = await getDoc(doc(db, 'sites', siteId));
+      const oldData = siteDoc.data()?.[`pageData_${oldId}`] || [];
+      
+      const newPages = pages.map(p => p.id === oldId ? { id: newId, name: newName } : p);
+      setPages(newPages);
+      
+      // Update DB: Add new page data, add new page list, delete old page data
+      await updateDoc(doc(db, 'sites', siteId), {
+        pages: newPages,
+        [`pageData_${newId}`]: oldData,
+        [`pageData_${oldId}`]: deleteField()
+      });
+      
+      router.push(`/editor/${siteId}/${newId}`);
+    }
+    setRenamingId(null);
+  };
+
+  const handleDeletePage = async (pageIdToDelete: string) => {
+    if (pageIdToDelete === 'home') { alert("Cannot delete home page."); return; }
+    if (!confirm("Delete this page and all its content?")) return;
+    
+    const newPages = pages.filter(p => p.id !== pageIdToDelete);
+    setPages(newPages);
+    await updateDoc(doc(db, 'sites', siteId), {
+      pages: newPages,
+      [`pageData_${pageIdToDelete}`]: deleteField()
+    });
+    
+    if (pageId === pageIdToDelete) {
+      router.push(`/editor/${siteId}/home`);
     }
   };
 
@@ -196,7 +230,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
           thumbnail: 'bg-gradient-to-br from-purple-600 to-blue-600',
           pageData: pageData
         });
-        alert("Pushed to Global Templates! All users can now use this.");
+        alert("Pushed to Global Templates!");
       }
     } catch (e) {
       alert("Failed to push template.");
@@ -227,7 +261,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     setIsAiEditing(false);
   };
 
-  // Prevent SSR rendering for the DnD components
   if (!isMounted) {
     return (
       <div className="flex flex-col h-screen justify-center items-center bg-neutral-900 text-white">
@@ -239,7 +272,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-neutral-900">
       {/* Top Toolbar */}
-      <div className="h-14 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between px-4 flex-shrink-0">
+      <div className="h-14 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between px-4 flex-shrink-0 z-40">
         <div className="flex items-center gap-6">
           <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white text-sm flex items-center gap-2 transition-colors">
             ← Dashboard
@@ -250,18 +283,44 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
           
           {/* Page Manager Dropdown */}
           <div className="relative group">
-            <button className="text-neutral-300 hover:text-white text-sm bg-neutral-800 px-3 py-1.5 rounded">
-              Page: {pageId} ▾
+            <button className="text-neutral-300 hover:text-white text-sm bg-neutral-800 px-3 py-1.5 rounded flex items-center gap-2">
+              Page: {pages.find(p => p.id === pageId)?.name || pageId} ▾
             </button>
-            <div className="absolute top-full left-0 mt-1 bg-neutral-800 rounded-md shadow-lg hidden group-hover:block z-50 min-w-[150px] border border-neutral-700">
+            <div className="absolute top-full left-0 mt-1 bg-neutral-800 rounded-md shadow-lg hidden group-hover:block z-50 min-w-[200px] border border-neutral-700 p-2">
               {pages.map(p => (
-                <button key={p} onClick={() => router.push(`/editor/${siteId}/${p}`)} className="block w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-700">
-                  {p}
-                </button>
+                <div key={p.id} className="flex items-center justify-between gap-2 hover:bg-neutral-700 rounded p-1">
+                  {renamingId === p.id ? (
+                    <input 
+                      type="text" 
+                      value={renameValue} 
+                      onChange={(e) => setRenameValue(e.target.value)} 
+                      onBlur={() => handleRenamePage(p.id)} 
+                      onKeyDown={(e) => e.key === 'Enter' && handleRenamePage(p.id)}
+                      autoFocus
+                      className="flex-1 bg-neutral-900 text-white text-xs p-1 rounded outline-none border border-blue-500"
+                    />
+                  ) : (
+                    <button onClick={() => router.push(`/editor/${siteId}/${p.id}`)} className="flex-1 text-left text-xs text-neutral-300">
+                      {p.name}
+                    </button>
+                  )}
+                  
+                  <div className="flex gap-1">
+                    <button onClick={() => { setRenamingId(p.id); setRenameValue(p.name); }} className="text-neutral-500 hover:text-white p-1">
+                      <Edit3 size={10} />
+                    </button>
+                    {p.id !== 'home' && (
+                      <button onClick={() => handleDeletePage(p.id)} className="text-neutral-500 hover:text-red-500 p-1">
+                        <Trash2 size={10} />
+                      </button>
+                    )}
+                  </div>
+                </div>
               ))}
-              <div className="border-t border-neutral-700 mt-1 pt-1 px-2 pb-2">
+              
+              <div className="border-t border-neutral-700 mt-2 pt-2">
                 <input type="text" value={newPageName} onChange={(e) => setNewPageName(e.target.value)} placeholder="New page name" className="w-full bg-neutral-900 text-white text-xs p-1 rounded mb-1 outline-none" />
-                <button onClick={handleCreatePage} className="w-full bg-blue-600 text-white text-xs py-1 rounded">+ Add Page</button>
+                <button onClick={handleCreatePage} className="w-full bg-blue-600 text-white text-xs py-1 rounded hover:bg-blue-700">+ Add Page</button>
               </div>
             </div>
           </div>
