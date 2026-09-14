@@ -54,7 +54,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         if (userDoc.exists()) {
           setUserRole(userDoc.data().role || 'admin');
           
-          // Fetch AI Limits
           const data = userDoc.data();
           const today = new Date().toDateString();
           const lastReset = data.lastAiReset?.toDate().toDateString();
@@ -80,12 +79,10 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         if (siteDoc.exists()) {
           const data = siteDoc.data();
           
-          // Load Pages List
           if (data.pages && data.pages.length > 0) {
             setPages(data.pages);
           }
 
-          // Determine which page key to load
           const pageKey = pageId === 'home' ? 'pageData' : `pageData_${pageId}`;
           const loadedNodes = data[pageKey];
           
@@ -251,11 +248,10 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     }
   };
 
-  // 8. AI Followup Edit (Client-Side Quota)
+  // 8. AI Followup Edit (Client-Side Quota & Crash Protection)
   const handleAiEdit = async () => {
     if (!aiPrompt) return;
 
-    // 1. Check Quota Client-Side
     if (aiLimits.followups >= aiLimits.followupLimit) {
       alert(`Daily edit limit reached (${aiLimits.followups}/${aiLimits.followupLimit}). Try again tomorrow.`);
       return;
@@ -269,11 +265,12 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         body: JSON.stringify({ prompt: aiPrompt, currentNodes: nodes })
       });
       const data = await res.json();
-      if (data.success) {
+      
+      // CRITICAL FIX: Ensure data.nodes is a valid array before setting it
+      if (data.success && Array.isArray(data.nodes)) {
         setNodes(data.nodes);
         setAiPrompt('');
         
-        // 2. Increment Quota in Firestore
         if (auth.currentUser) {
           await updateDoc(doc(db, 'users', auth.currentUser.uid), {
             aiFollowupsUsed: aiLimits.followups + 1,
@@ -284,7 +281,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         
         alert("AI updated your website!");
       } else {
-        alert("AI failed to edit: " + (data.details || "Try a different prompt."));
+        alert("AI failed to edit or returned invalid data. Try a different prompt.");
       }
     } catch (error) {
       alert("Error connecting to AI.");
@@ -312,46 +309,49 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
             View Live Site ↗
           </a>
           
-          {/* Page Manager Dropdown */}
+          {/* Page Manager Dropdown (Fixed Gap) */}
           <div className="relative group">
             <button className="text-neutral-300 hover:text-white text-sm bg-neutral-800 px-3 py-1.5 rounded flex items-center gap-2">
               Page: {pages.find(p => p.id === pageId)?.name || pageId} ▾
             </button>
-            <div className="absolute top-full left-0 mt-1 bg-neutral-800 rounded-md shadow-lg hidden group-hover:block z-50 min-w-[200px] border border-neutral-700 p-2">
-              {pages.map(p => (
-                <div key={p.id} className="flex items-center justify-between gap-2 hover:bg-neutral-700 rounded p-1">
-                  {renamingId === p.id ? (
-                    <input 
-                      type="text" 
-                      value={renameValue} 
-                      onChange={(e) => setRenameValue(e.target.value)} 
-                      onBlur={() => handleRenamePage(p.id)} 
-                      onKeyDown={(e) => e.key === 'Enter' && handleRenamePage(p.id)}
-                      autoFocus
-                      className="flex-1 bg-neutral-900 text-white text-xs p-1 rounded outline-none border border-blue-500"
-                    />
-                  ) : (
-                    <button onClick={() => router.push(`/editor/${siteId}/${p.id}`)} className="flex-1 text-left text-xs text-neutral-300">
-                      {p.name}
-                    </button>
-                  )}
-                  
-                  <div className="flex gap-1">
-                    <button onClick={() => { setRenamingId(p.id); setRenameValue(p.name); }} className="text-neutral-500 hover:text-white p-1">
-                      <Edit3 size={10} />
-                    </button>
-                    {p.id !== 'home' && (
-                      <button onClick={() => handleDeletePage(p.id)} className="text-neutral-500 hover:text-red-500 p-1">
-                        <Trash2 size={10} />
+            {/* Removed mt-1 gap, used pt-1 on a wrapper to bridge the hover area */}
+            <div className="absolute top-full left-0 pt-1 hidden group-hover:block z-50 w-full">
+              <div className="bg-neutral-800 rounded-md shadow-lg min-w-[200px] border border-neutral-700 p-2">
+                {pages.map(p => (
+                  <div key={p.id} className="flex items-center justify-between gap-2 hover:bg-neutral-700 rounded p-1">
+                    {renamingId === p.id ? (
+                      <input 
+                        type="text" 
+                        value={renameValue} 
+                        onChange={(e) => setRenameValue(e.target.value)} 
+                        onBlur={() => handleRenamePage(p.id)} 
+                        onKeyDown={(e) => e.key === 'Enter' && handleRenamePage(p.id)}
+                        autoFocus
+                        className="flex-1 bg-neutral-900 text-white text-xs p-1 rounded outline-none border border-blue-500"
+                      />
+                    ) : (
+                      <button onClick={() => router.push(`/editor/${siteId}/${p.id}`)} className="flex-1 text-left text-xs text-neutral-300">
+                        {p.name}
                       </button>
                     )}
+                    
+                    <div className="flex gap-1">
+                      <button onClick={() => { setRenamingId(p.id); setRenameValue(p.name); }} className="text-neutral-500 hover:text-white p-1">
+                        <Edit3 size={10} />
+                      </button>
+                      {p.id !== 'home' && (
+                        <button onClick={() => handleDeletePage(p.id)} className="text-neutral-500 hover:text-red-500 p-1">
+                          <Trash2 size={10} />
+                        </button>
+                      )}
+                    </div>
                   </div>
+                ))}
+                
+                <div className="border-t border-neutral-700 mt-2 pt-2">
+                  <input type="text" value={newPageName} onChange={(e) => setNewPageName(e.target.value)} placeholder="New page name" className="w-full bg-neutral-900 text-white text-xs p-1 rounded mb-1 outline-none" />
+                  <button onClick={handleCreatePage} className="w-full bg-blue-600 text-white text-xs py-1 rounded hover:bg-blue-700">+ Add Page</button>
                 </div>
-              ))}
-              
-              <div className="border-t border-neutral-700 mt-2 pt-2">
-                <input type="text" value={newPageName} onChange={(e) => setNewPageName(e.target.value)} placeholder="New page name" className="w-full bg-neutral-900 text-white text-xs p-1 rounded mb-1 outline-none" />
-                <button onClick={handleCreatePage} className="w-full bg-blue-600 text-white text-xs py-1 rounded hover:bg-blue-700">+ Add Page</button>
               </div>
             </div>
           </div>
