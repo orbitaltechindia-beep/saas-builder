@@ -11,11 +11,15 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { TEMPLATES } from '@/lib/templates';
 import { Node } from '@/types';
 import { db, auth } from '@/lib/firebase/client';
-import { doc, setDoc, getDoc, onAuthStateChanged } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { Sparkles } from 'lucide-react';
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
   const resolvedParams = React.use(params);
   const { siteId, pageId } = resolvedParams;
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiEditing, setIsAiEditing] = useState(false);
 
   const [isMounted, setIsMounted] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
@@ -184,23 +188,27 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   };
 
   // 7. Superadmin Push to Templates
-  const handlePushToTemplates = async () => {
-    if (!siteId) return;
+    const handleAiEdit = async () => {
+    if (!aiPrompt) return;
+    setIsAiEditing(true);
     try {
-      const siteDoc = await getDoc(doc(db, 'sites', siteId));
-      if (siteDoc.exists()) {
-        const pageData = siteDoc.data().pageData || [];
-        await setDoc(doc(db, 'global_templates', `tpl-${Date.now()}`), {
-          name: 'AI Custom Template',
-          description: 'AI generated premium template',
-          thumbnail: 'bg-gradient-to-br from-purple-600 to-blue-600',
-          pageData: pageData
-        });
-        alert("Pushed to Global Templates! All users can now use this.");
+      const res = await fetch('/api/edit-with-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt, currentNodes: nodes })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNodes(data.nodes);
+        setAiPrompt('');
+        alert("AI updated your website!");
+      } else {
+        alert("AI failed to edit. Try a different prompt.");
       }
-    } catch (e) {
-      alert("Failed to push template.");
+    } catch (error) {
+      alert("Error connecting to AI.");
     }
+    setIsAiEditing(false);
   };
 
   // Prevent SSR rendering for the DnD components
@@ -266,6 +274,25 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
           <InspectorPanel />
         </div>
       </DndContext>
+            {/* Floating AI Followup Assistant */}
+      <div className="fixed bottom-6 right-6 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4 w-80">
+        <h3 className="text-white text-sm font-bold mb-2 flex items-center gap-2">
+          <Sparkles size={14} className="text-blue-400" /> AI Followup
+        </h3>
+        <textarea 
+          value={aiPrompt}
+          onChange={(e) => setAiPrompt(e.target.value)}
+          placeholder="e.g., Make the hero darker, or add a pricing section..."
+          className="w-full bg-neutral-800 text-white text-xs p-2 rounded border border-neutral-700 outline-none focus:border-blue-500 resize-none h-20"
+        />
+        <button 
+          onClick={handleAiEdit} 
+          disabled={isAiEditing}
+          className="w-full bg-blue-600 text-white text-xs py-2 rounded mt-2 hover:bg-blue-700 disabled:opacity-50"
+        >
+          {isAiEditing ? 'Modifying...' : 'Update with AI ✨'}
+        </button>
+      </div>
     </div>
   );
 }
