@@ -35,8 +35,8 @@ export default function InspectorPanel({ aiPrompt, setAiPrompt, isAiEditing, han
   const labelClass = "text-[10px] uppercase tracking-wider text-neutral-500 font-bold";
 
   return (
-    <div className="w-64 bg-neutral-900 border-l border-neutral-800 h-screen text-white overflow-y-auto flex-shrink-0 flex flex-col">
-      <div className="p-4 border-b border-neutral-800 sticky top-0 bg-neutral-900 z-10">
+    <div className="w-64 bg-neutral-900 border-l border-neutral-800 h-full text-white overflow-hidden flex-shrink-0 flex flex-col">
+      <div className="p-4 border-b border-neutral-800 bg-neutral-900 z-10 flex-shrink-0">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
           {selectedNode ? `${selectedNode.type} Settings` : 'Inspector'}
@@ -44,13 +44,13 @@ export default function InspectorPanel({ aiPrompt, setAiPrompt, isAiEditing, han
       </div>
       
       {/* Scrollable Inspector Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto p-4">
         {!selectedNode ? (
           <div className="p-4 text-center text-neutral-500 text-sm mt-10">
             Select an element on the canvas to edit its properties.
           </div>
         ) : (
-          <div className="p-4 space-y-6">
+          <div className="space-y-6">
             {/* Content */}
             {(selectedNode.type === 'Text' || selectedNode.type === 'Button' || selectedNode.type === 'Link') && (
               <div className="space-y-2">
@@ -202,7 +202,7 @@ export default function InspectorPanel({ aiPrompt, setAiPrompt, isAiEditing, han
       </div>
 
       {/* AI Followup Assistant (Integrated at Bottom) */}
-      <div className="border-t border-neutral-800 p-4 bg-neutral-950 flex-shrink-0">
+      <div className="border-t border-neutral-800 p-4 bg-neutral-950 flex-shrink-0 pb-6">
         <h3 className="text-white text-sm font-bold mb-2 flex items-center gap-2">
           <Sparkles size={14} className="text-blue-400" /> AI Followup
         </h3>
@@ -210,7 +210,7 @@ export default function InspectorPanel({ aiPrompt, setAiPrompt, isAiEditing, han
           value={aiPrompt}
           onChange={(e) => setAiPrompt(e.target.value)}
           placeholder="e.g., Make the hero darker..."
-          className="w-full bg-neutral-800 text-white text-xs p-2 rounded border border-neutral-700 outline-none focus:border-blue-500 resize-none h-20 mb-2"
+          className="w-full bg-neutral-800 text-white text-xs p-2 rounded border border-neutral-700 outline-none focus:border-blue-500 resize-none h-16 mb-2"
         />
         <div className="text-[10px] text-neutral-500 mb-2 text-right">
           Edits used today: {aiLimits.followups}/{aiLimits.followupLimit}
