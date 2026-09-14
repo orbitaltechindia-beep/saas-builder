@@ -2,6 +2,7 @@
 
 import { useEditorStore } from '@/store/editorStore';
 import { Node } from '@/types';
+import { CldUploadButton } from 'next-cloudinary';
 
 export default function InspectorPanel() {
   const nodes = useEditorStore((s) => s.nodes);
@@ -59,6 +60,21 @@ export default function InspectorPanel() {
               value={selectedNode.props.text || ''} 
               onChange={(e) => updateComponentProps(selectedNode.id, { text: e.target.value })}
             />
+          </div>
+        )}
+
+                {/* Href for Buttons & Links */}
+        {(selectedNode.type === 'Button' || selectedNode.type === 'Link') && (
+          <div className="space-y-2">
+            <label className={labelClass}>Link URL</label>
+            <input 
+              type="text" 
+              placeholder="https://external.com OR /about-us" 
+              className={inputClass}
+              value={selectedNode.props.href || ''} 
+              onChange={(e) => updateComponentProps(selectedNode.id, { href: e.target.value })}
+            />
+            <p className="text-[10px] text-neutral-500">Use /pagename for internal pages (e.g., /pricing)</p>
           </div>
         )}
 
@@ -137,6 +153,22 @@ export default function InspectorPanel() {
             </div>
           </div>
         </div>
+
+        {/* Image Uploader */}
+        {selectedNode.type === 'Image' && (
+          <div className="space-y-3">
+            <label className={labelClass}>Image Upload</label>
+            <CldUploadButton
+              uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
+              className="w-full bg-blue-600 text-white text-xs px-3 py-2 rounded cursor-pointer hover:bg-blue-700"
+              onUpload={(result: any) => {
+                updateComponentProps(selectedNode.id, { src: result.info.secure_url });
+              }}
+            >
+              Upload from Device
+            </CldUploadButton>
+          </div>
+        )}
 
         {/* Background & Borders */}
         {selectedNode.type === 'Container' && (

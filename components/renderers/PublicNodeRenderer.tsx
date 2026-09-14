@@ -20,15 +20,8 @@ export function PublicNodeRenderer({ node }: { node: Node }) {
       </button>
     );
   }
-
   if (node.type === 'Image') {
-    return (
-      <div 
-        style={{ width: '100%', minHeight: '150px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', ...currentStyles }}
-      >
-        Image Placeholder
-      </div>
-    );
+    return <img src={node.props.src} alt="Site Image" style={currentStyles} className="w-full h-auto" />;
   }
 
     if (node.type === 'Video') {

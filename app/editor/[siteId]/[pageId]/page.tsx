@@ -14,6 +14,9 @@ import { db } from '@/lib/firebase/client';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
+ const [pages, setPages] = useState<string[]>(['home']);
+const [newPageName, setNewPageName] = useState('');
+ 
   const resolvedParams = React.use(params);
   const { siteId } = resolvedParams;
 
@@ -111,6 +114,18 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       }
     }
   };
+
+    const handleCreatePage = async () => {
+    if (!newPageName || !siteId) return;
+    const slug = newPageName.toLowerCase().replace(/\s+/g, '-');
+    if (!pages.includes(slug)) {
+      setPages([...pages, slug]);
+      // Save empty array to Firestore for this new page
+      await setDoc(doc(db, 'sites', siteId), { [`pageData_${slug}`]: [] }, { merge: true });
+      router.push(`/editor/${siteId}/${slug}`);
+      setNewPageName('');
+    }
+  };
     const handleSave = async () => {
     setSaveStatus('Saving...');
     try {
@@ -146,29 +161,42 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-neutral-900">
       {/* Top Toolbar */}
-      <div className="h-14 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between px-4 flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white text-sm flex items-center gap-2 transition-colors">
-            ← Back to Dashboard
+           <div className="h-14 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between px-4 flex-shrink-0">
+        <div className="flex items-center gap-6">
+          <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white text-sm flex items-center gap-2">
+            ← Dashboard
           </button>
-          {/* View Live Site Button */}
-          <a 
-            href={`/view/${siteId}`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 transition-colors"
-          >
+          <a href={`/view/${siteId}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-sm">
             View Live Site ↗
           </a>
+          
+          {/* Page Manager Dropdown */}
+          <div className="relative group">
+            <button className="text-neutral-300 hover:text-white text-sm bg-neutral-800 px-3 py-1.5 rounded">
+              Page: {siteId === 'page-home' ? 'home' : siteId} ▾
+            </button>
+            <div className="absolute top-full left-0 mt-1 bg-neutral-800 rounded-md shadow-lg hidden group-hover:block z-50 min-w-[150px]">
+              {pages.map(p => (
+                <button key={p} onClick={() => router.push(`/editor/${siteId}/${p}`)} className="block w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-700">
+                  {p}
+                </button>
+              ))}
+              <div className="border-t border-neutral-700 mt-1 pt-1 px-2 pb-2">
+                <input type="text" value={newPageName} onChange={(e) => setNewPageName(e.target.value)} placeholder="New page name" className="w-full bg-neutral-900 text-white text-xs p-1 rounded mb-1" />
+                <button onClick={handleCreatePage} className="w-full bg-blue-600 text-white text-xs py-1 rounded">+ Add Page</button>
+              </div>
+            </div>
+          </div>
         </div>
+        
         <div className="flex items-center gap-4">
           {saveStatus && <span className="text-green-500 text-sm font-medium">{saveStatus}</span>}
-          <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
+          <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
             Save Changes
           </button>
         </div>
       </div>
-
+      
       {/* Editor Body */}
       <DndContext onDragEnd={handleDragEnd}>
         <div className="flex flex-1 overflow-hidden">

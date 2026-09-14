@@ -111,13 +111,8 @@ export function NodeRenderer({ node }: { node: Node }) {
         </button>
       )}
 
-      {node.type === 'Image' && (
-        <div 
-          className="w-full h-40 bg-neutral-200 flex items-center justify-center text-neutral-500 rounded-md"
-          style={currentStyles}
-        >
-          Image Placeholder
-        </div>
+            {node.type === 'Image' && (
+        <img src={node.props.src} alt="Uploaded" className="w-full h-auto rounded-md object-cover" style={currentStyles} />
       )}
 
             {node.type === 'Video' && (
