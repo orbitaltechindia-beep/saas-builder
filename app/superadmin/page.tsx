@@ -27,6 +27,12 @@ interface Enquiry {
   status: string;
 }
 
+interface ManualDomainState {
+  userId: string;
+  email: string;
+  domain: string;
+}
+
 export default function SuperadminPanel() {
   const router = useRouter();
   const [users, setUsers] = useState<ClientUser[]>([]);
@@ -34,7 +40,9 @@ export default function SuperadminPanel() {
   const [loading, setLoading] = useState(true);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [view, setView] = useState<'clients' | 'enquiries'>('clients');
-  const [manualDomain, setManualDomain] = useState<{ userId: string, domain: string } | null>(null);
+  
+  // State for the floating modal
+  const [manualDomain, setManualDomain] = useState<ManualDomainState | null>(null);
 
   // 1. Auth Guard
   useEffect(() => {
@@ -101,7 +109,7 @@ export default function SuperadminPanel() {
       const vercelData = await vercelRes.json();
 
       if (!vercelData.success) {
-        alert("Vercel API failed to auto-provision. Please use 'Manual Map' below to provision it manually.");
+        alert("Vercel API failed to auto-provision. Please use 'Manual Map' to provision it manually.");
         return;
       }
 
@@ -131,7 +139,7 @@ export default function SuperadminPanel() {
     await setDoc(doc(db, 'domains', domain), { siteId, ownerId: userId });
     
     alert(`Success! ${domain} was manually mapped in the database. Make sure you add it to Vercel manually.`);
-    setManualDomain(null);
+    setManualDomain(null); // Close the modal
   };
 
   if (loading || !isSuperadmin) {
@@ -256,23 +264,13 @@ export default function SuperadminPanel() {
                         </button>
                       )}
 
-                      {/* Manual Domain Mapping UI */}
-                      {manualDomain?.userId === user.id ? (
-                        <div className="flex gap-1 mt-2">
-                          <input 
-                            type="text" 
-                            value={manualDomain.domain} 
-                            onChange={(e) => setManualDomain({ userId: user.id, domain: e.target.value })} 
-                            className="flex-1 bg-neutral-800 text-white text-xs p-1 rounded outline-none border border-blue-500"
-                          />
-                          <button onClick={manualMapDomain} className="bg-green-600 text-white text-xs px-2 rounded">Map</button>
-                        </div>
-                      ) : (
-                        user.role === 'admin' && (
-                          <button onClick={() => setManualDomain({ userId: user.id, domain: user.customDomainRequest || '' })} className="bg-neutral-700 text-white px-3 py-1.5 text-xs rounded-lg hover:bg-neutral-600 inline-flex items-center gap-1 w-full justify-center">
-                            Manual Map Domain
-                          </button>
-                        )
+                      {user.role === 'admin' && (
+                        <button 
+                          onClick={() => setManualDomain({ userId: user.id, email: user.email, domain: user.customDomainRequest || '' })} 
+                          className="bg-neutral-700 text-white px-3 py-1.5 text-xs rounded-lg hover:bg-neutral-600 inline-flex items-center gap-1 w-full justify-center"
+                        >
+                          Manual Map Domain
+                        </button>
                       )}
 
                       {user.role === 'admin' && user.approved && (
@@ -328,6 +326,39 @@ export default function SuperadminPanel() {
           </div>
         )}
       </div>
+
+      {/* Floating Manual Domain Modal */}
+      {manualDomain && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Manual Domain Mapping</h3>
+              <button onClick={() => setManualDomain(null)} className="text-neutral-400 hover:text-white text-2xl">×</button>
+            </div>
+            <p className="text-neutral-400 text-sm mb-4">
+              Manually map a domain for <span className="text-white font-medium">{manualDomain.email}</span>. This will bypass the Vercel API and update the database directly.
+            </p>
+            
+            <label className="text-xs text-neutral-400 uppercase tracking-wider mb-1 block">Domain Name</label>
+            <input 
+              type="text" 
+              value={manualDomain.domain} 
+              onChange={(e) => setManualDomain({ ...manualDomain, domain: e.target.value })} 
+              placeholder="www.example.com"
+              className="w-full bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 focus:border-blue-500 outline-none mb-6"
+            />
+            
+            <div className="flex gap-3">
+              <button onClick={() => setManualDomain(null)} className="flex-1 bg-neutral-700 text-white px-4 py-2 rounded-lg hover:bg-neutral-600 transition-colors">
+                Cancel
+              </button>
+              <button onClick={manualMapDomain} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                Confirm & Map
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
