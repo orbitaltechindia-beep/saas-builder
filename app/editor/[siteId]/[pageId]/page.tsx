@@ -13,7 +13,7 @@ import { Node } from '@/types';
 import { db, auth } from '@/lib/firebase/client';
 import { doc, setDoc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Sparkles, Trash2, Edit3, Undo2, Redo2 } from 'lucide-react';
+import { Sparkles, Trash2, Edit3 } from 'lucide-react';
 
 // Helper to fix AI malformed data
 const sanitizeNodes = (nodes: any[]): Node[] => {
@@ -49,8 +49,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   const moveComponent = useEditorStore((s) => s.moveComponent);
   const removeComponent = useEditorStore((s) => s.removeComponent);
   const duplicateComponent = useEditorStore((s) => s.duplicateComponent);
-  const undo = useEditorStore((s) => s.undo);
-  const redo = useEditorStore((s) => s.redo);
   
   const searchParams = useSearchParams();
   const [saveStatus, setSaveStatus] = useState('');
@@ -133,23 +131,11 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     fetchSiteData();
   }, [searchParams, siteId, pageId, setNodes]);
 
-  // 3. Keyboard Shortcuts (Including Undo/Redo)
+  // 3. Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-      
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
-        e.preventDefault();
-        undo();
-        return;
-      } 
-      if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
-        e.preventDefault();
-        redo();
-        return;
-      }
-
       if (!selectedNodeId) return;
 
       if (e.key === 'ArrowUp') { e.preventDefault(); moveComponent(selectedNodeId, 'up'); } 
@@ -160,7 +146,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeId, moveComponent, removeComponent, duplicateComponent, undo, redo]);
+  }, [selectedNodeId, moveComponent, removeComponent, duplicateComponent]);
 
   // 4. Drag and Drop
   const handleDragEnd = (event: DragEndEvent) => {
@@ -390,16 +376,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         </div>
         
         <div className="flex items-center gap-4">
-          {/* Undo/Redo Controls */}
-          <div className="flex items-center gap-1 border-r border-neutral-800 pr-4 mr-2">
-            <button onClick={() => undo()} className="text-neutral-400 hover:text-white p-2 rounded hover:bg-neutral-800 transition-colors" title="Undo (Ctrl+Z)">
-              <Undo2 size={16} />
-            </button>
-            <button onClick={() => redo()} className="text-neutral-400 hover:text-white p-2 rounded hover:bg-neutral-800 transition-colors" title="Redo (Ctrl+Y)">
-              <Redo2 size={16} />
-            </button>
-          </div>
-
           {saveStatus && <span className="text-green-500 text-sm font-medium">{saveStatus}</span>}
           
           {userRole === 'superadmin' && (
