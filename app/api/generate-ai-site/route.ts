@@ -2,7 +2,17 @@ import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export async function POST(req: Request) {
-  const { prompt } = await req.json();
+  const { prompt, features } = await req.json();
+
+  // Build dynamic instructions based on toggles
+  let featureInstructions = "Include sections for: Hero, Trust Strip, CTA. ";
+  if (features?.courses) featureInstructions += "Include a Courses section. ";
+  if (features?.centres) featureInstructions += "Include a Centres/Locations section. ";
+  if (features?.results) featureInstructions += "Include a Results section. ";
+  if (features?.testimonials) featureInstructions += "Include a Testimonials section. ";
+  if (features?.blog) featureInstructions += "Include a Blog section. ";
+  if (features?.tests) featureInstructions += "Include a Free Resources/Tests section. ";
+  if (features?.notifications) featureInstructions += "Include a Notification sign-up section. ";
 
   const systemPrompt = `You are an elite front-end developer. 
   Output ONLY a valid JSON array of "Node" objects. No markdown.
@@ -16,19 +26,16 @@ export async function POST(req: Request) {
   
   Rules:
   1. Use modern, premium aesthetics (dark mode, flexbox, grid).
-  2. Use inline styles heavily (padding, backgroundColor, color, fontSize, display, justifyContent, alignItems, borderRadius).
+  2. Use inline styles heavily.
   3. Generate unique string IDs.
-  4. Create at least a Hero section, a Features section, and a CTA section.`;
+  4. ${featureInstructions}`;
 
   try {
     const apiKey = process.env.GOOGLE_AI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "Missing GOOGLE_AI_API_KEY environment variable" }, { status: 500 });
-    }
+    if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Updated to the exact model Google recommended in the error message!
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const result = await model.generateContent([
       { text: systemPrompt },
