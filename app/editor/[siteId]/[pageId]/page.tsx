@@ -10,18 +10,17 @@ import InspectorPanel from '@/components/editor/InspectorPanel';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TEMPLATES } from '@/lib/templates';
 import { Node } from '@/types';
-import { db } from '@/lib/firebase/client';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase/client';
+import { doc, setDoc, getDoc, onAuthStateChanged } from 'firebase/firestore';
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
- const [pages, setPages] = useState<string[]>(['home']);
-const [newPageName, setNewPageName] = useState('');
- 
   const resolvedParams = React.use(params);
-  const { siteId } = resolvedParams;
+  const { siteId, pageId } = resolvedParams;
 
   const [isMounted, setIsMounted] = useState(false);
+  const [userRole, setUserRole] = useState<string>('');
   const router = useRouter();
+  
   const addComponent = useEditorStore((s) => s.addComponent);
   const setNodes = useEditorStore((s) => s.setNodes);
   const nodes = useEditorStore((s) => s.nodes);
@@ -33,39 +32,65 @@ const [newPageName, setNewPageName] = useState('');
   const searchParams = useSearchParams();
   const [saveStatus, setSaveStatus] = useState('');
 
-   useEffect(() => {
+  // Multi-Page State
+  const [pages, setPages] = useState<string[]>(['home']);
+  const [newPageName, setNewPageName] = useState('');
+
+  // 1. Mount & Auth State
+  useEffect(() => {
     setIsMounted(true);
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) setUserRole(userDoc.data().role || 'admin');
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // 2. Load Site Data (Multi-Page Aware)
+  useEffect(() => {
+    if (!siteId) return;
     
     const fetchSiteData = async () => {
-      // 1. Check Firestore for saved cloud data
       try {
         const siteDoc = await getDoc(doc(db, 'sites', siteId));
-        if (siteDoc.exists() && siteDoc.data()?.pageData) {
-          setNodes(siteDoc.data().pageData);
-          return; // Exit if we found cloud data
+        if (siteDoc.exists()) {
+          const data = siteDoc.data();
+          
+          // Determine which page key to load
+          const pageKey = pageId === 'home' ? 'pageData' : `pageData_${pageId}`;
+          const loadedNodes = data[pageKey];
+          
+          if (loadedNodes && loadedNodes.length > 0) {
+            setNodes(loadedNodes);
+          } else {
+            // Fallback to template if it's a new home page
+            const templateId = searchParams.get('template');
+            if (templateId && pageId === 'home') {
+              const template = TEMPLATES.find(t => t.id === templateId);
+              if (template) setNodes(template.pageData);
+            } else {
+              setNodes([]); // Empty page for new sub-pages
+            }
+          }
+        } else {
+          // Fallback to template if site doesn't exist in DB yet
+          const templateId = searchParams.get('template');
+          if (templateId) {
+            const template = TEMPLATES.find(t => t.id === templateId);
+            if (template) setNodes(template.pageData);
+          }
         }
       } catch (error) {
-        console.log("No cloud data yet, loading template...");
-      }
-
-      // 2. Fallback to localStorage (for fast loading)
-      const savedData = localStorage.getItem(`site_data_${siteId}`);
-      if (savedData) {
-        setNodes(JSON.parse(savedData));
-      } else {
-        // 3. Fallback to Template (if it's a brand new site)
-        const templateId = searchParams.get('template');
-        if (templateId) {
-          const template = TEMPLATES.find(t => t.id === templateId);
-          if (template) setNodes(template.pageData);
-        }
+        console.error("Error loading site:", error);
       }
     };
 
     fetchSiteData();
-  }, [searchParams, siteId, setNodes]);
+  }, [searchParams, siteId, pageId, setNodes]);
 
-  // Keyboard Shortcuts
+  // 3. Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -91,7 +116,8 @@ const [newPageName, setNewPageName] = useState('');
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, moveComponent, removeComponent, duplicateComponent]);
 
-    const handleDragEnd = (event: DragEndEvent) => {
+  // 4. Drag and Drop
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && (over.id === 'canvas-root' || over.id !== active.id)) {
       const type = active.data.current?.type as Node['type'];
@@ -108,6 +134,7 @@ const [newPageName, setNewPageName] = useState('');
         else if (type === 'Icon') newNode = { id: uuidv4(), type: 'Icon', props: { text: '⭐', styles: { fontSize: '2rem', color: '#f59e0b' } } };
         else if (type === 'Link') newNode = { id: uuidv4(), type: 'Link', props: { text: 'Click Here', href: '#', styles: { color: '#3b82f6', textDecoration: 'underline' } } };
         else if (type === 'Form') newNode = { id: uuidv4(), type: 'Form', props: { styles: { display: 'flex', flexDirection: 'column', gap: '1rem', padding: '2rem', backgroundColor: '#f9fafb', borderRadius: '12px' } } };
+        
         if (newNode) {
           addComponent(newNode);
         }
@@ -115,7 +142,36 @@ const [newPageName, setNewPageName] = useState('');
     }
   };
 
-    const handleCreatePage = async () => {
+  // 5. Save (Multi-Page Aware)
+  const handleSave = async () => {
+    setSaveStatus('Saving...');
+    try {
+      // Clean nodes to remove undefined values
+      const cleanNodes = JSON.parse(JSON.stringify(nodes));
+      
+      // Determine which page key to save under
+      const pageKey = pageId === 'home' ? 'pageData' : `pageData_${pageId}`;
+      
+      // Save to Firebase Firestore
+      await setDoc(doc(db, 'sites', siteId), {
+        [pageKey]: cleanNodes,
+        updatedAt: new Date()
+      }, { merge: true }); // merge: true ensures we don't overwrite other pages!
+      
+      // Also save to localStorage as a quick fallback cache
+      localStorage.setItem(`site_data_${siteId}_${pageId}`, JSON.stringify(cleanNodes));
+      
+      setSaveStatus('Saved & Live!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    } catch (error) {
+      console.error("Save failed:", error);
+      setSaveStatus('Error saving!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    }
+  };
+
+  // 6. Create New Page
+  const handleCreatePage = async () => {
     if (!newPageName || !siteId) return;
     const slug = newPageName.toLowerCase().replace(/\s+/g, '-');
     if (!pages.includes(slug)) {
@@ -126,29 +182,27 @@ const [newPageName, setNewPageName] = useState('');
       setNewPageName('');
     }
   };
-    const handleSave = async () => {
-    setSaveStatus('Saving...');
+
+  // 7. Superadmin Push to Templates
+  const handlePushToTemplates = async () => {
+    if (!siteId) return;
     try {
-      // 1. Clean the nodes array to remove any undefined values (Firestore doesn't accept undefined)
-      const cleanNodes = JSON.parse(JSON.stringify(nodes));
-      
-      // 2. Save the cleaned data to Firebase Firestore
-      await setDoc(doc(db, 'sites', siteId), {
-        pageData: cleanNodes,
-        updatedAt: new Date()
-      }, { merge: true });
-      
-      // 3. Also save to localStorage as a quick fallback cache
-      localStorage.setItem(`site_data_${siteId}`, JSON.stringify(cleanNodes));
-      
-      setSaveStatus('Saved & Live!');
-      setTimeout(() => setSaveStatus(''), 3000);
-    } catch (error) {
-      console.error("Save failed:", error);
-      setSaveStatus('Error saving!');
-      setTimeout(() => setSaveStatus(''), 3000);
+      const siteDoc = await getDoc(doc(db, 'sites', siteId));
+      if (siteDoc.exists()) {
+        const pageData = siteDoc.data().pageData || [];
+        await setDoc(doc(db, 'global_templates', `tpl-${Date.now()}`), {
+          name: 'AI Custom Template',
+          description: 'AI generated premium template',
+          thumbnail: 'bg-gradient-to-br from-purple-600 to-blue-600',
+          pageData: pageData
+        });
+        alert("Pushed to Global Templates! All users can now use this.");
+      }
+    } catch (e) {
+      alert("Failed to push template.");
     }
   };
+
   // Prevent SSR rendering for the DnD components
   if (!isMounted) {
     return (
@@ -161,28 +215,28 @@ const [newPageName, setNewPageName] = useState('');
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-neutral-900">
       {/* Top Toolbar */}
-           <div className="h-14 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between px-4 flex-shrink-0">
+      <div className="h-14 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center gap-6">
-          <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white text-sm flex items-center gap-2">
+          <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white text-sm flex items-center gap-2 transition-colors">
             ← Dashboard
           </button>
-          <a href={`/view/${siteId}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-sm">
+          <a href={`/view/${siteId}/${pageId}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 transition-colors">
             View Live Site ↗
           </a>
           
           {/* Page Manager Dropdown */}
           <div className="relative group">
             <button className="text-neutral-300 hover:text-white text-sm bg-neutral-800 px-3 py-1.5 rounded">
-              Page: {siteId === 'page-home' ? 'home' : siteId} ▾
+              Page: {pageId} ▾
             </button>
-            <div className="absolute top-full left-0 mt-1 bg-neutral-800 rounded-md shadow-lg hidden group-hover:block z-50 min-w-[150px]">
+            <div className="absolute top-full left-0 mt-1 bg-neutral-800 rounded-md shadow-lg hidden group-hover:block z-50 min-w-[150px] border border-neutral-700">
               {pages.map(p => (
                 <button key={p} onClick={() => router.push(`/editor/${siteId}/${p}`)} className="block w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-700">
                   {p}
                 </button>
               ))}
               <div className="border-t border-neutral-700 mt-1 pt-1 px-2 pb-2">
-                <input type="text" value={newPageName} onChange={(e) => setNewPageName(e.target.value)} placeholder="New page name" className="w-full bg-neutral-900 text-white text-xs p-1 rounded mb-1" />
+                <input type="text" value={newPageName} onChange={(e) => setNewPageName(e.target.value)} placeholder="New page name" className="w-full bg-neutral-900 text-white text-xs p-1 rounded mb-1 outline-none" />
                 <button onClick={handleCreatePage} className="w-full bg-blue-600 text-white text-xs py-1 rounded">+ Add Page</button>
               </div>
             </div>
@@ -191,12 +245,19 @@ const [newPageName, setNewPageName] = useState('');
         
         <div className="flex items-center gap-4">
           {saveStatus && <span className="text-green-500 text-sm font-medium">{saveStatus}</span>}
-          <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+          
+          {userRole === 'superadmin' && (
+            <button onClick={handlePushToTemplates} className="bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-700 transition-colors">
+              Push as Template
+            </button>
+          )}
+
+          <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
             Save Changes
           </button>
         </div>
       </div>
-      
+
       {/* Editor Body */}
       <DndContext onDragEnd={handleDragEnd}>
         <div className="flex flex-1 overflow-hidden">

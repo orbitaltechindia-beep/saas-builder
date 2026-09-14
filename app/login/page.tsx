@@ -1,9 +1,10 @@
 'use client';
 import { useState } from 'react';
 import { auth, db } from '@/lib/firebase/client';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,23 +14,31 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        // LOGIN LOGIC
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // Check if approved
+        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+        if (userDoc.exists() && !userDoc.data().approved) {
+          await signOut(auth); // Kick them out
+          throw new Error("Your account is pending Superadmin approval.");
+        }
         router.push('/dashboard');
       } else {
+        // SIGNUP LOGIC
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           email: email,
           role: 'admin',
-          customDomainRequest: null,
+          approved: false, // CRITICAL: Requires Superadmin approval
           createdAt: new Date()
         });
-        router.push('/dashboard');
+        throw new Error("Account created! Please wait for Superadmin approval to log in.");
       }
     } catch (error: any) {
       setError(error.message.replace('Firebase: ', ''));
