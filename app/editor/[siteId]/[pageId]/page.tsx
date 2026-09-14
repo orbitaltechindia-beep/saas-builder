@@ -15,6 +15,24 @@ import { doc, setDoc, getDoc, updateDoc, deleteField } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth';
 import { Sparkles, Trash2, Edit3 } from 'lucide-react';
 
+// Helper to fix AI malformed data
+const sanitizeNodes = (nodes: any[]): Node[] => {
+  if (!Array.isArray(nodes)) return [];
+  return nodes.map(node => {
+    const cleanNode: any = { ...node };
+    if (!cleanNode.props) cleanNode.props = {};
+    if (!cleanNode.props.styles) cleanNode.props.styles = {};
+    
+    if (cleanNode.type === 'Container') {
+      if (!cleanNode.children || !Array.isArray(cleanNode.children)) {
+        cleanNode.children = [];
+      } else {
+        cleanNode.children = sanitizeNodes(cleanNode.children);
+      }
+    }
+    return cleanNode;
+  });
+};
 
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
   const resolvedParams = React.use(params);
@@ -249,25 +267,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     }
   };
 
-  // Helper to fix AI malformed data
-  const sanitizeNodes = (nodes: any[]): Node[] => {
-    if (!Array.isArray(nodes)) return [];
-    return nodes.map(node => {
-      const cleanNode: any = { ...node };
-      if (!cleanNode.props) cleanNode.props = {};
-      if (!cleanNode.props.styles) cleanNode.props.styles = {};
-      
-      if (cleanNode.type === 'Container') {
-        if (!cleanNode.children || !Array.isArray(cleanNode.children)) {
-          cleanNode.children = [];
-        } else {
-          cleanNode.children = sanitizeNodes(cleanNode.children);
-        }
-      }
-      return cleanNode;
-    });
-  };
-
   // 8. AI Followup Edit (Client-Side Quota & Crash Protection)
   const handleAiEdit = async () => {
     if (!aiPrompt) return;
@@ -286,7 +285,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       });
       const data = await res.json();
       
-           // CRITICAL: Sanitize AI data and verify it's an array
+      // CRITICAL: Sanitize AI data and verify it's an array
       if (data.success && Array.isArray(data.nodes)) {
         const cleanNodes = sanitizeNodes(data.nodes);
         setNodes(cleanNodes); // This updates the Zustand store and re-renders the canvas
@@ -302,7 +301,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         
         alert("AI updated your website!");
       } else {
-        // Show the EXACT error from the API so we know what's wrong
         alert("AI failed to edit: " + (data.details || data.error || "Try a different prompt."));
       }
     } catch (error) {
@@ -399,36 +397,20 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         <div className="flex flex-1 overflow-hidden">
           <LeftSidebar />
           <EditorCanvas />
-          <InspectorPanel />
+          
+          {/* 
+            Pass AI state and handlers down to the InspectorPanel.
+            The InspectorPanel will render the AI box at its bottom 40%.
+          */}
+          <InspectorPanel 
+            aiPrompt={aiPrompt}
+            setAiPrompt={setAiPrompt}
+            isAiEditing={isAiEditing}
+            handleAiEdit={handleAiEdit}
+            aiLimits={aiLimits}
+          />
         </div>
       </DndContext>
-
-      {/* Floating AI Followup Assistant (Draggable) */}
-            {/* Floating AI Followup Assistant (Draggable) */}
-            {/* Fixed AI Followup Assistant (Right Side, 40% from bottom) */}
-      <div className="fixed bottom-40 right-6 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4 w-80">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-white text-sm font-bold flex items-center gap-2">
-            <Sparkles size={14} className="text-blue-400" /> AI Followup
-          </h3>
-        </div>
-        <textarea 
-          value={aiPrompt}
-          onChange={(e) => setAiPrompt(e.target.value)}
-          placeholder="e.g., Make the hero darker, or add a pricing section..."
-          className="w-full bg-neutral-800 text-white text-xs p-2 rounded border border-neutral-700 outline-none focus:border-blue-500 resize-none h-20"
-        />
-        <div className="text-[10px] text-neutral-500 mt-1 mb-2 text-right">
-          Edits used today: {aiLimits.followups}/{aiLimits.followupLimit}
-        </div>
-        <button 
-          onClick={handleAiEdit} 
-          disabled={isAiEditing}
-          className="w-full bg-blue-600 text-white text-xs py-2 rounded mt-1 hover:bg-blue-700 disabled:opacity-50"
-        >
-          {isAiEditing ? 'Modifying...' : 'Update with AI ✨'}
-        </button>
-      </div>
     </div>
   );
 }
