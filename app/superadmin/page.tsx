@@ -4,7 +4,7 @@ import { db, auth } from '@/lib/firebase/client';
 import { collection, onSnapshot, updateDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { Globe, Check, X, Server, Cpu, Link2, ShieldCheck, Loader2, UserCheck, Mail, Power } from 'lucide-react';
+import { Globe, Check, X, Server, Cpu, Link2, ShieldCheck, Loader2, UserCheck, Mail, Power, Sparkles } from 'lucide-react';
 
 interface ClientUser {
   id: string;
@@ -41,10 +41,8 @@ export default function SuperadminPanel() {
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [view, setView] = useState<'clients' | 'enquiries'>('clients');
   
-  // State for the floating modal
   const [manualDomain, setManualDomain] = useState<ManualDomainState | null>(null);
 
-  // 1. Auth Guard
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) { router.push('/login'); return; }
@@ -60,7 +58,6 @@ export default function SuperadminPanel() {
     return () => unsub();
   }, [router]);
 
-  // 2. Fetch Data
   useEffect(() => {
     if (!isSuperadmin) return;
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
@@ -72,33 +69,28 @@ export default function SuperadminPanel() {
     return () => { unsubUsers(); unsubEnquiries(); };
   }, [isSuperadmin]);
 
-  // 3. Approve User
   const approveUser = async (userId: string) => {
     await updateDoc(doc(db, 'users', userId), { approved: true, active: true });
     alert("User approved! They can now log in.");
   };
 
-  // 4. Toggle User Activation (Pause/Unpause Website)
   const toggleUserActivation = async (userId: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
     await updateDoc(doc(db, 'users', userId), { active: newStatus });
     
-    // Rollback/Restore their active website
     const userDoc = await getDoc(doc(db, 'users', userId));
     const siteId = userDoc.data()?.activeSiteId;
     if (siteId) {
       await updateDoc(doc(db, 'sites', siteId), { status: newStatus ? 'live' : 'paused' });
     }
-    alert(`Client ${newStatus ? 'activated' : 'deactivated'}. Their website is now ${newStatus ? 'live' : 'paused'}.`);
+    alert(`Client ${newStatus ? 'activated' : 'deactivated'}.`);
   };
 
-  // 5. Approve More AI Edits
   const approveMoreEdits = async (userId: string) => {
     await updateDoc(doc(db, 'users', userId), { aiFollowupLimit: 22, followupIncreaseRequest: null });
     alert("Increased edit limit by 10 for this client!");
   };
 
-  // 6. Approve & Automate Domain
   const approveDomain = async (userId: string, domain: string) => {
     try {
       const vercelRes = await fetch('/api/setup-domain', {
@@ -109,7 +101,7 @@ export default function SuperadminPanel() {
       const vercelData = await vercelRes.json();
 
       if (!vercelData.success) {
-        alert("Vercel API failed to auto-provision. Please use 'Manual Map' to provision it manually.");
+        alert("Vercel API failed. Please use Manual Map.");
         return;
       }
 
@@ -121,12 +113,10 @@ export default function SuperadminPanel() {
       await setDoc(doc(db, 'domains', domain), { siteId, ownerId: userId });
       alert(`Success! ${domain} was automatically added to Vercel.`);
     } catch (error) {
-      console.error("Automation Error:", error);
-      alert("An error occurred during automation. Try Manual Map.");
+      alert("Error during automation. Try Manual Map.");
     }
   };
 
-  // 7. Manual Domain Mapping (Fallback)
   const manualMapDomain = async () => {
     if (!manualDomain || !manualDomain.domain) return;
     const { userId, domain } = manualDomain;
@@ -138,8 +128,8 @@ export default function SuperadminPanel() {
     await updateDoc(doc(db, 'users', userId), { customDomain: domain, domainStatus: 'live' });
     await setDoc(doc(db, 'domains', domain), { siteId, ownerId: userId });
     
-    alert(`Success! ${domain} was manually mapped in the database. Make sure you add it to Vercel manually.`);
-    setManualDomain(null); // Close the modal
+    alert(`Success! ${domain} was manually mapped.`);
+    setManualDomain(null);
   };
 
   if (loading || !isSuperadmin) {
@@ -164,7 +154,6 @@ export default function SuperadminPanel() {
           </div>
         </div>
 
-        {/* Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 flex items-center gap-4">
             <Cpu className="text-blue-500" size={24} />
@@ -196,7 +185,6 @@ export default function SuperadminPanel() {
           </div>
         </div>
 
-        {/* View Switcher */}
         <div className="flex gap-4 mb-8 border-b border-neutral-800">
           <button onClick={() => setView('clients')} className={`pb-3 px-4 text-sm font-medium transition-colors ${view === 'clients' ? 'text-white border-b-2 border-blue-500' : 'text-neutral-500 hover:text-white'}`}>
             Client Provisioning
@@ -206,7 +194,6 @@ export default function SuperadminPanel() {
           </button>
         </div>
 
-        {/* Client Table */}
         {view === 'clients' && (
           <div className="bg-neutral-900 rounded-2xl border border-neutral-800 overflow-hidden shadow-xl">
             <div className="p-5 border-b border-neutral-800"><h3 className="font-bold text-lg">Client Provisioning</h3></div>
@@ -254,7 +241,7 @@ export default function SuperadminPanel() {
                       
                       {user.followupIncreaseRequest && (
                         <button onClick={() => approveMoreEdits(user.id)} className="bg-purple-600 text-white px-3 py-1.5 text-xs rounded-lg hover:bg-purple-700 inline-flex items-center gap-1 w-full justify-center">
-                          Approve More Edits
+                          <Sparkles size={12} /> Approve More Edits
                         </button>
                       )}
 
@@ -289,7 +276,6 @@ export default function SuperadminPanel() {
           </div>
         )}
 
-        {/* Enquiries Table */}
         {view === 'enquiries' && (
           <div className="bg-neutral-900 rounded-2xl border border-neutral-800 overflow-hidden shadow-xl">
             <div className="p-5 border-b border-neutral-800"><h3 className="font-bold text-lg">Website Enquiries</h3></div>
@@ -327,7 +313,6 @@ export default function SuperadminPanel() {
         )}
       </div>
 
-      {/* Floating Manual Domain Modal */}
       {manualDomain && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
@@ -336,7 +321,7 @@ export default function SuperadminPanel() {
               <button onClick={() => setManualDomain(null)} className="text-neutral-400 hover:text-white text-2xl">×</button>
             </div>
             <p className="text-neutral-400 text-sm mb-4">
-              Manually map a domain for <span className="text-white font-medium">{manualDomain.email}</span>. This will bypass the Vercel API and update the database directly.
+              Manually map a domain for <span className="text-white font-medium">{manualDomain.email}</span>.
             </p>
             
             <label className="text-xs text-neutral-400 uppercase tracking-wider mb-1 block">Domain Name</label>
