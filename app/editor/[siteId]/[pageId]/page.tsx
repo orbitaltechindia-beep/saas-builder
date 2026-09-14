@@ -286,7 +286,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       });
       const data = await res.json();
       
-      // CRITICAL: Sanitize AI data and verify it's an array
+           // CRITICAL: Sanitize AI data and verify it's an array
       if (data.success && Array.isArray(data.nodes)) {
         const cleanNodes = sanitizeNodes(data.nodes);
         setNodes(cleanNodes); // This updates the Zustand store and re-renders the canvas
@@ -302,7 +302,8 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         
         alert("AI updated your website!");
       } else {
-        alert("AI failed to edit or returned invalid data. Try a different prompt.");
+        // Show the EXACT error from the API so we know what's wrong
+        alert("AI failed to edit: " + (data.details || data.error || "Try a different prompt."));
       }
     } catch (error) {
       alert("Error connecting to AI.");

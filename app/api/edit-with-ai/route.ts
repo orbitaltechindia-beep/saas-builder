@@ -4,8 +4,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 export async function POST(req: Request) {
   const { prompt, currentNodes } = await req.json();
 
-   try {
-    const systemPrompt = `You are an elite front-end developer. The user has a JSON array of their current website "Node" objects and wants to modify it. Output ONLY the modified JSON array. No markdown.`;
+  try {
+    const systemPrompt = `You are an elite front-end developer. The user has a JSON array of their current website "Node" objects and wants to modify it. Output ONLY the modified JSON array. No markdown, no explanations.`;
 
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
@@ -26,18 +26,24 @@ export async function POST(req: Request) {
     if (jsonStart !== -1 && jsonEnd !== -1) {
       content = content.substring(jsonStart, jsonEnd + 1);
     } else {
-      // If no array brackets found, try to parse as object and wrap in array
-      try {
-        const parsedObj = JSON.parse(content);
-        if (parsedObj.nodes && Array.isArray(parsedObj.nodes)) {
-          content = JSON.stringify(parsedObj.nodes);
-        }
-      } catch (e) {
-        // Ignore, just try to parse the original content
-      }
+      return NextResponse.json({ 
+        success: false, 
+        error: "AI did not return a valid JSON array.",
+        details: "The AI response did not contain a starting '[' or ending ']'."
+      }, { status: 500 });
     }
 
-    const parsedNodes = JSON.parse(content);
+    let parsedNodes;
+    try {
+      parsedNodes = JSON.parse(content);
+    } catch (parseError: any) {
+      console.error("JSON Parse Error in AI Edit. Raw content:", content);
+      return NextResponse.json({ 
+        success: false, 
+        error: "Failed to parse AI JSON.",
+        details: "The AI returned malformed JSON that could not be parsed."
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, nodes: parsedNodes });
   } catch (error: any) {
