@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { db } from '@/lib/firebase/client';
 import { doc, getDoc } from 'firebase/firestore';
 import { PublicNodeRenderer } from '@/components/renderers/PublicNodeRenderer';
 import { Node } from '@/types';
 import { useSearchParams } from 'next/navigation';
 
-export default function PublicDomainPage() {
+function DomainViewerContent() {
   const searchParams = useSearchParams();
   const domain = searchParams.get('domain');
   const pageId = searchParams.get('page') || 'home';
@@ -23,29 +23,23 @@ export default function PublicDomainPage() {
 
     const fetchSite = async () => {
       try {
-        // 1. Look up the domain in the public 'domains' collection
         const domainDoc = await getDoc(doc(db, 'domains', domain));
         
         if (domainDoc.exists()) {
           const siteId = domainDoc.data().siteId;
-          
-          // 2. Fetch the actual website document
           const siteDoc = await getDoc(doc(db, 'sites', siteId));
           if (siteDoc.exists()) {
-            // 3. Check if site is paused
             if (siteDoc.data().status === 'paused') {
               setIsPaused(true);
               setNodes([]);
               return;
             }
-
-            // 4. Determine which page data to load (home vs about-us)
             const pageKey = pageId === 'home' ? 'pageData' : `pageData_${pageId}`;
             setNodes(siteDoc.data()?.[pageKey] || []);
             return;
           }
         }
-        setNodes([]); // Not found
+        setNodes([]); 
       } catch (error) {
         console.error("Domain routing error:", error);
         setNodes([]);
@@ -88,5 +82,13 @@ export default function PublicDomainPage() {
         Developed By Orbital Technologies
       </footer>
     </div>
+  );
+}
+
+export default function PublicDomainPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center bg-white text-neutral-400">Loading...</div>}>
+      <DomainViewerContent />
+    </Suspense>
   );
 }
