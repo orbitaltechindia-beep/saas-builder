@@ -404,13 +404,14 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       </DndContext>
 
       {/* Floating AI Followup Assistant (Draggable) */}
-      <Draggable handle=".drag-handle">
-        <div className="fixed bottom-6 right-6 z-[100] bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4 w-80 cursor-default">
-          <div className="drag-handle cursor-move flex items-center justify-between mb-2">
-            <h3 className="text-white text-sm font-bold flex items-center gap-2">
+            {/* Floating AI Followup Assistant (Draggable) */}
+      <Draggable handle=".drag-handle" bounds="body">
+        <div className="fixed bottom-6 right-6 z-[100] bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4 w-80 cursor-default select-none">
+          <div className="drag-handle cursor-move flex items-center justify-between mb-2 p-1 -m-1">
+            <h3 className="text-white text-sm font-bold flex items-center gap-2 pointer-events-none">
               <Sparkles size={14} className="text-blue-400" /> AI Followup
             </h3>
-            <span className="text-neutral-500 text-xs">⋮⋮</span>
+            <span className="text-neutral-500 text-xs pointer-events-none">⋮⋮</span>
           </div>
           <textarea 
             value={aiPrompt}
