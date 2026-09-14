@@ -18,8 +18,6 @@ import { Sparkles } from 'lucide-react';
 export default function EditorPage({ params }: { params: Promise<{ siteId: string; pageId: string }> }) {
   const resolvedParams = React.use(params);
   const { siteId, pageId } = resolvedParams;
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [isAiEditing, setIsAiEditing] = useState(false);
 
   const [isMounted, setIsMounted] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
@@ -39,6 +37,10 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   // Multi-Page State
   const [pages, setPages] = useState<string[]>(['home']);
   const [newPageName, setNewPageName] = useState('');
+
+  // AI Followup State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiEditing, setIsAiEditing] = useState(false);
 
   // 1. Mount & Auth State
   useEffect(() => {
@@ -150,19 +152,14 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   const handleSave = async () => {
     setSaveStatus('Saving...');
     try {
-      // Clean nodes to remove undefined values
       const cleanNodes = JSON.parse(JSON.stringify(nodes));
-      
-      // Determine which page key to save under
       const pageKey = pageId === 'home' ? 'pageData' : `pageData_${pageId}`;
       
-      // Save to Firebase Firestore
       await setDoc(doc(db, 'sites', siteId), {
         [pageKey]: cleanNodes,
         updatedAt: new Date()
-      }, { merge: true }); // merge: true ensures we don't overwrite other pages!
+      }, { merge: true }); 
       
-      // Also save to localStorage as a quick fallback cache
       localStorage.setItem(`site_data_${siteId}_${pageId}`, JSON.stringify(cleanNodes));
       
       setSaveStatus('Saved & Live!');
@@ -180,7 +177,6 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     const slug = newPageName.toLowerCase().replace(/\s+/g, '-');
     if (!pages.includes(slug)) {
       setPages([...pages, slug]);
-      // Save empty array to Firestore for this new page
       await setDoc(doc(db, 'sites', siteId), { [`pageData_${slug}`]: [] }, { merge: true });
       router.push(`/editor/${siteId}/${slug}`);
       setNewPageName('');
@@ -188,7 +184,27 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   };
 
   // 7. Superadmin Push to Templates
-    const handleAiEdit = async () => {
+  const handlePushToTemplates = async () => {
+    if (!siteId) return;
+    try {
+      const siteDoc = await getDoc(doc(db, 'sites', siteId));
+      if (siteDoc.exists()) {
+        const pageData = siteDoc.data().pageData || [];
+        await setDoc(doc(db, 'global_templates', `tpl-${Date.now()}`), {
+          name: 'AI Custom Template',
+          description: 'AI generated premium template',
+          thumbnail: 'bg-gradient-to-br from-purple-600 to-blue-600',
+          pageData: pageData
+        });
+        alert("Pushed to Global Templates! All users can now use this.");
+      }
+    } catch (e) {
+      alert("Failed to push template.");
+    }
+  };
+
+  // 8. AI Followup Edit
+  const handleAiEdit = async () => {
     if (!aiPrompt) return;
     setIsAiEditing(true);
     try {
@@ -274,7 +290,8 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
           <InspectorPanel />
         </div>
       </DndContext>
-            {/* Floating AI Followup Assistant */}
+
+      {/* Floating AI Followup Assistant */}
       <div className="fixed bottom-6 right-6 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4 w-80">
         <h3 className="text-white text-sm font-bold mb-2 flex items-center gap-2">
           <Sparkles size={14} className="text-blue-400" /> AI Followup
