@@ -5,40 +5,40 @@ import { db } from '@/lib/firebase/client';
 import { doc, getDoc } from 'firebase/firestore';
 import { PublicNodeRenderer } from '@/components/renderers/PublicNodeRenderer';
 import { Node } from '@/types';
-import { useSearchParams } from 'next/navigation';
 
 function DomainViewerContent() {
-  const searchParams = useSearchParams();
-  const domain = searchParams.get('domain');
-  const pageId = searchParams.get('page') || 'home';
-  
   const [nodes, setNodes] = useState<Node[] | null>(null);
   const [isPaused, setIsPaused] = useState(false);
-
+  
   useEffect(() => {
-    if (!domain) {
-      setNodes([]);
-      return;
-    }
-
+    // Get the domain directly from the browser URL (e.g., infinityclasses.vercel.app)
+    const hostname = window.location.hostname;
+    
     const fetchSite = async () => {
       try {
-        const domainDoc = await getDoc(doc(db, 'domains', domain));
+        // 1. Look up the domain in the public 'domains' collection
+        const domainDoc = await getDoc(doc(db, 'domains', hostname));
         
         if (domainDoc.exists()) {
           const siteId = domainDoc.data().siteId;
+          
+          // 2. Fetch the actual website document
           const siteDoc = await getDoc(doc(db, 'sites', siteId));
           if (siteDoc.exists()) {
+            // 3. Check if site is paused
             if (siteDoc.data().status === 'paused') {
               setIsPaused(true);
               setNodes([]);
               return;
             }
-            const pageKey = pageId === 'home' ? 'pageData' : `pageData_${pageId}`;
-            setNodes(siteDoc.data()?.[pageKey] || []);
+            
+            // 4. Load the home page data
+            setNodes(siteDoc.data()?.pageData || []);
             return;
           }
         }
+        
+        // If nothing found, show empty screen
         setNodes([]); 
       } catch (error) {
         console.error("Domain routing error:", error);
@@ -46,7 +46,7 @@ function DomainViewerContent() {
       }
     };
     fetchSite();
-  }, [domain, pageId]);
+  }, []);
 
   if (isPaused) {
     return (
