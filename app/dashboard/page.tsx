@@ -169,10 +169,11 @@ export default function ClientDashboard() {
       window.open(`/view/${siteId}/home`, '_blank');
     }
   };
+
   // Helper to fix AI malformed data
-  const sanitizeNodes = (nodes: any[]): Node[] => {
+  const sanitizeNodes = (nodes: any[]): any[] => {
     if (!Array.isArray(nodes)) return [];
-    return nodes.map(node => {
+    return nodes.map((node: any) => {
       const cleanNode: any = { ...node };
       if (!cleanNode.props) cleanNode.props = {};
       if (!cleanNode.props.styles) cleanNode.props.styles = {};
@@ -214,7 +215,6 @@ export default function ClientDashboard() {
       const newSiteId = `site-${Date.now()}`;
       const aiTitle = aiPrompt.substring(0, 20) + (aiPrompt.length > 20 ? "..." : "") + " (AI)";
       
-      // CRITICAL: Sanitize the AI data before saving
       const cleanNodes = sanitizeNodes(data.nodes);
       
       const corePages = [
@@ -368,6 +368,21 @@ export default function ClientDashboard() {
             <div className="flex items-center gap-3 mt-3">
               <span className="font-mono text-sm bg-yellow-500/10 text-yellow-400 px-3 py-1.5 rounded-md border border-yellow-500/20">{domainRequest}</span>
               <span className="text-yellow-400 text-xs flex items-center gap-1"><span className="h-2 w-2 bg-yellow-500 rounded-full animate-pulse"></span> Pending Approval</span>
+            </div>
+          ) : domainStatus === 'failed' ? (
+            <div className="mt-3">
+              <p className="text-red-400 text-xs mb-2">Your previous domain request was unavailable. Please try another name.</p>
+              <div className="flex items-center gap-2">
+                {domainTab === 'free' ? (
+                  <>
+                    <input type="text" value={domainRequest} onChange={(e) => setDomainRequest(e.target.value.replace(/\s+/g, ''))} placeholder="new-name" className="flex-1 bg-neutral-800 text-sm border border-neutral-700 p-2 rounded-l-md outline-none focus:border-blue-500" />
+                    <span className="bg-neutral-700 text-neutral-400 text-sm p-2 rounded-r-md border border-neutral-700">.vercel.app</span>
+                  </>
+                ) : (
+                  <input type="text" value={domainRequest} onChange={(e) => setDomainRequest(e.target.value)} placeholder="www.yourdomain.com" className="flex-1 bg-neutral-800 text-sm border border-neutral-700 p-2 rounded-md outline-none focus:border-blue-500" />
+                )}
+                <button onClick={handleDomainRequest} className="bg-white text-black text-sm px-4 py-2 rounded-md font-medium hover:bg-neutral-200 ml-2">Retry</button>
+              </div>
             </div>
           ) : (
             <div className="mt-3">

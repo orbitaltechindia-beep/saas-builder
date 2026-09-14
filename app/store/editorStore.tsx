@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 interface EditorState {
   nodes: Node[];
+  past: Node[][];
+  future: Node[][];
   selectedNodeId: string | null;
   setNodes: (nodes: Node[]) => void;
   addComponent: (node: Node) => void;
@@ -12,15 +14,18 @@ interface EditorState {
   moveComponent: (nodeId: string, direction: 'up' | 'down') => void;
   updateComponentProps: (nodeId: string, props: Partial<Node['props']>) => void;
   selectComponent: (nodeId: string | null) => void;
+  undo: () => void;
+  redo: () => void;
 }
 
+// Helper to push current state to history
+const pushHistory = (state: EditorState): Partial<EditorState> => ({
+  past: [...state.past, state.nodes].slice(-50), // Keep max 50 history steps
+  future: []
+});
+
 const cloneNodeWithNewIds = (node: Node): Node => {
-  return {
-    ...node,
-    id: uuidv4(),
-    props: { ...node.props },
-    children: node.children?.map(cloneNodeWithNewIds)
-  };
+  return { ...node, id: uuidv4(), props: { ...node.props }, children: node.children?.map(cloneNodeWithNewIds) };
 };
 
 const updateNode = (nodes: Node[], nodeId: string, updater: (n: Node) => Node): Node[] => {
@@ -32,9 +37,7 @@ const updateNode = (nodes: Node[], nodeId: string, updater: (n: Node) => Node): 
 };
 
 const removeFromTree = (nodes: Node[], nodeId: string): Node[] => {
-  return nodes
-    .filter(node => node.id !== nodeId)
-    .map(node => node.children ? { ...node, children: removeFromTree(node.children, nodeId) } : node);
+  return nodes.filter(node => node.id !== nodeId).map(node => node.children ? { ...node, children: removeFromTree(node.children, nodeId) } : node);
 };
 
 const duplicateInTree = (nodes: Node[], nodeId: string): Node[] => {
@@ -45,9 +48,7 @@ const duplicateInTree = (nodes: Node[], nodeId: string): Node[] => {
       duplicated = true;
       acc.push(cloneNodeWithNewIds(node));
     }
-    if (node.children) {
-      node.children = duplicateInTree(node.children, nodeId);
-    }
+    if (node.children) node.children = duplicateInTree(node.children, nodeId);
     return acc;
   }, []);
 };
@@ -57,40 +58,69 @@ const moveInTree = (nodes: Node[], nodeId: string, direction: 'up' | 'down'): No
   for (let i = 0; i < newNodes.length; i++) {
     if (newNodes[i].id === nodeId) {
       const swapIndex = direction === 'up' ? i - 1 : i + 1;
-      if (swapIndex >= 0 && swapIndex < newNodes.length) {
-        [newNodes[i], newNodes[swapIndex]] = [newNodes[swapIndex], newNodes[i]];
-      }
+      if (swapIndex >= 0 && swapIndex < newNodes.length) [newNodes[i], newNodes[swapIndex]] = [newNodes[swapIndex], newNodes[i]];
       return newNodes;
     }
-    if (newNodes[i].children) {
-      newNodes[i].children = moveInTree(newNodes[i].children!, nodeId, direction);
-    }
+    if (newNodes[i].children) newNodes[i].children = moveInTree(newNodes[i].children!, nodeId, direction);
   }
   return newNodes;
 };
 
-export const useEditorStore = create<EditorState>((set) => ({
+export const useEditorStore = create<EditorState>((set, get) => ({
   nodes: [],
+  past: [],
+  future: [],
   selectedNodeId: null,
-  setNodes: (nodes) => set({ nodes }),
-  addComponent: (node) => set((state) => ({ nodes: [...state.nodes, node] })),
+  
+  setNodes: (nodes) => set({ nodes, past: [], future: [] }),
+  
+  addComponent: (node) => set((state) => ({
+    ...pushHistory(state),
+    nodes: [...state.nodes, node]
+  })),
   
   removeComponent: (nodeId) => set((state) => ({
+    ...pushHistory(state),
     nodes: removeFromTree(state.nodes, nodeId),
     selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId
   })),
   
   duplicateComponent: (nodeId) => set((state) => ({
+    ...pushHistory(state),
     nodes: duplicateInTree(state.nodes, nodeId)
   })),
   
   moveComponent: (nodeId, direction) => set((state) => ({
+    ...pushHistory(state),
     nodes: moveInTree(state.nodes, nodeId, direction)
   })),
 
   updateComponentProps: (nodeId, props) => set((state) => ({
+    ...pushHistory(state),
     nodes: updateNode(state.nodes, nodeId, (n) => ({ ...n, props: { ...n.props, ...props } }))
   })),
   
   selectComponent: (nodeId) => set({ selectedNodeId: nodeId }),
+  
+  undo: () => set((state) => {
+    if (state.past.length === 0) return state;
+    const previous = state.past[state.past.length - 1];
+    const newPast = state.past.slice(0, -1);
+    return {
+      nodes: previous,
+      past: newPast,
+      future: [state.nodes, ...state.future]
+    };
+  }),
+  
+  redo: () => set((state) => {
+    if (state.future.length === 0) return state;
+    const next = state.future[0];
+    const newFuture = state.future.slice(1);
+    return {
+      nodes: next,
+      past: [...state.past, state.nodes],
+      future: newFuture
+    };
+  })
 }));
