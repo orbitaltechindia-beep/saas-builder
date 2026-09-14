@@ -8,27 +8,30 @@ import { Node } from '@/types';
 
 export default function PublicDomainPage() {
   const [nodes, setNodes] = useState<Node[] | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
-    // Get the hostname directly from the browser (e.g., infinityclasses.vercel.app)
     const hostname = window.location.hostname;
     
     const fetchSite = async () => {
       try {
-        // 1. Look up the domain in the public 'domains' collection
         const domainDoc = await getDoc(doc(db, 'domains', hostname));
         
         if (domainDoc.exists()) {
           const siteId = domainDoc.data().siteId;
-          
-          // 2. Fetch the actual website data
           const siteDoc = await getDoc(doc(db, 'sites', siteId));
+          
           if (siteDoc.exists()) {
+            if (siteDoc.data().status === 'paused') {
+              setIsPaused(true);
+              setNodes([]);
+              return;
+            }
             setNodes(siteDoc.data()?.pageData || []);
             return;
           }
         }
-        setNodes([]); // Not found
+        setNodes([]); 
       } catch (error) {
         console.error("Domain routing error:", error);
         setNodes([]);
@@ -36,6 +39,25 @@ export default function PublicDomainPage() {
     };
     fetchSite();
   }, []);
+
+  if (isPaused) {
+    return (
+      <div className="h-screen bg-neutral-950 flex items-center justify-center text-white p-4">
+        <div className="text-center max-w-md">
+          <div className="h-16 w-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold mb-3">Site Under Maintenance</h1>
+          <p className="text-neutral-400 mb-8">We are currently performing scheduled updates to improve your experience. Please check back soon!</p>
+          <div className="text-xs text-neutral-600 font-mono">Developed By Orbital Technologies</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ... keep your existing loading and empty states below this ...
 
   if (nodes === null) {
     return <div className="h-screen flex items-center justify-center bg-white text-neutral-400">Loading site...</div>;

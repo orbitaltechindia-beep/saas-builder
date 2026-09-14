@@ -5,7 +5,7 @@ import { TEMPLATES } from '@/lib/templates';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase/client';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, updateDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, deleteDoc, collection, onSnapshot } from 'firebase/firestore';
 import { LayoutGrid, Globe, LogOut, Plus, Settings, Eye, Pause, Play, Trash2, Sparkles } from 'lucide-react';
 
 interface ClientSite {
@@ -31,6 +31,7 @@ export default function ClientDashboard() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeSiteId, setActiveSiteId] = useState<string | null>(null);
+  const [globalTemplates, setGlobalTemplates] = useState<any[]>([]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -52,17 +53,27 @@ export default function ClientDashboard() {
     return () => unsub();
   }, [router]);
 
+  // Fetch Global AI Templates pushed by Superadmin
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'global_templates'), (snapshot) => {
+      setGlobalTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, []);
+
   const handleSelectTemplate = async (templateId: string) => {
     const template = TEMPLATES.find(t => t.id === templateId);
-    if (!template) return;
+    const gTemplate = globalTemplates.find(t => t.id === templateId);
+    if (!template && !gTemplate) return;
+    
     const newSiteId = `site-${Date.now()}`;
-    const newSite = { id: newSiteId, name: `${template.name} Site`, template: templateId, status: 'live' };
+    const name = template ? `${template.name} Site` : `${gTemplate.name} Site`;
+    const newSite = { id: newSiteId, name: name, template: templateId, status: 'live' };
     const updatedSites = [...sites, newSite];
     setSites(updatedSites);
     localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
-    await updateDoc(doc(db, 'users', user.uid), { activeSiteId: newSiteId });
     setShowTemplateModal(false);
-    router.push(`/editor/${newSiteId}/page-home?template=${templateId}`);
+    router.push(`/editor/${newSiteId}/home?template=${templateId}`);
   };
 
   const handleDomainRequest = async () => {
@@ -81,18 +92,15 @@ export default function ClientDashboard() {
 
   const handleSetActive = async (siteId: string) => {
     if (!user) return;
-    // 1. Update user profile
     await updateDoc(doc(db, 'users', user.uid), { activeSiteId: siteId });
     setActiveSiteId(siteId);
     
-    // 2. CRITICAL FIX: If user has a live domain, update the domains collection to point to this new site!
     if (currentDomain) {
       await setDoc(doc(db, 'domains', currentDomain), {
         siteId: siteId,
         ownerId: user.uid
       });
     }
-    
     alert("This website is now active and will show on your domain!");
   };
 
@@ -101,12 +109,11 @@ export default function ClientDashboard() {
     if (!site) return;
     const newStatus = site.status === 'live' ? 'paused' : 'live';
     
-    // Update local state
     const updatedSites = sites.map(s => s.id === siteId ? { ...s, status: newStatus } : s);
     setSites(updatedSites);
     localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
     
-    // Update Firestore status
+    // CRITICAL: Update status in Firestore so public viewer knows
     await updateDoc(doc(db, 'sites', siteId), { status: newStatus });
   };
 
@@ -123,11 +130,11 @@ export default function ClientDashboard() {
     if (currentDomain) {
       window.open(`https://${currentDomain}`, '_blank');
     } else {
-      window.open(`/view/${siteId}`, '_blank');
+      window.open(`/view/${siteId}/home`, '_blank');
     }
   };
 
-    const handleGenerateAI = async () => {
+  const handleGenerateAI = async () => {
     if (!aiPrompt || !user) return;
     setIsGenerating(true);
     try {
@@ -141,7 +148,6 @@ export default function ClientDashboard() {
         const newSiteId = `site-${Date.now()}`;
         const aiTitle = aiPrompt.substring(0, 20) + (aiPrompt.length > 20 ? "..." : "") + " (AI)";
         
-        // Save to Firestore with the title and status
         await setDoc(doc(db, 'sites', newSiteId), { 
           pageData: data.nodes, 
           title: aiTitle,
@@ -149,9 +155,6 @@ export default function ClientDashboard() {
           updatedAt: new Date() 
         });
         
-        // REMOVED: await updateDoc(doc(db, 'users', user.uid), { activeSiteId: newSiteId });
-        
-        // Add to local dashboard state so it appears instantly
         const newSite = { id: newSiteId, name: aiTitle, template: 'ai-generated', status: 'live' };
         const updatedSites = [...sites, newSite];
         setSites(updatedSites);
@@ -166,7 +169,7 @@ export default function ClientDashboard() {
     }
     setIsGenerating(false);
   };
-  
+
   if (!user) return <div className="h-screen bg-neutral-950 flex items-center justify-center text-white">Loading...</div>;
 
   return (
@@ -291,7 +294,7 @@ export default function ClientDashboard() {
                     <button onClick={() => handleViewLive(site.id)} className="flex-1 bg-neutral-800 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-neutral-700">
                       <Eye size={14} /> View
                     </button>
-                    <button onClick={() => router.push(`/editor/${site.id}/home?template=${site.template}`)} className="flex-1 bg-blue-600 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-blue-700">
+                    <button onClick={() => router.push(`/editor/${site.id}/home`)} className="flex-1 bg-blue-600 text-white text-xs px-3 py-2 rounded flex items-center justify-center gap-1 hover:bg-blue-700">
                       <Settings size={14} /> Edit
                     </button>
                   </div>
@@ -334,6 +337,16 @@ export default function ClientDashboard() {
                   <div className={`h-40 ${template.thumbnail} group-hover:scale-105 transition-transform`}></div>
                   <div className="p-4">
                     <h4 className="font-bold text-white">{template.name}</h4>
+                    <p className="text-sm text-neutral-500 mt-1">{template.description}</p>
+                  </div>
+                </div>
+              ))}
+              
+              {globalTemplates.map(template => (
+                <div key={template.id} onClick={() => handleSelectTemplate(template.id)} className="border border-purple-500/30 rounded-lg overflow-hidden cursor-pointer hover:border-purple-500 transition-all group">
+                  <div className={`h-40 ${template.thumbnail} group-hover:scale-105 transition-transform`}></div>
+                  <div className="p-4">
+                    <h4 className="font-bold text-white flex items-center gap-1"><Sparkles size={14} className="text-purple-400" /> {template.name}</h4>
                     <p className="text-sm text-neutral-500 mt-1">{template.description}</p>
                   </div>
                 </div>
