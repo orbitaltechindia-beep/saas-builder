@@ -5,16 +5,23 @@ export async function proxy(request: NextRequest) {
   const url = request.nextUrl;
   const hostname = request.headers.get('host') || '';
   
-  // REPLACE 'your-actual-vercel-app.vercel.app' WITH YOUR REAL VERCEL URL
-  const mainAppDomains = ['localhost:3000', 'orbitalwebsites.vercel.app']; 
+  // REPLACE 'saas-builder-dun.vercel.app' WITH YOUR ACTUAL MAIN VERCEL URL!
+  const mainAppDomains = ['localhost:3000', 'saas-builder-dun.vercel.app']; 
   
   // If the visitor is on your main SaaS domain, let them use the app normally
   if (mainAppDomains.includes(hostname)) {
     return NextResponse.next();
   }
 
-  // If the visitor is on a client's domain, silently rewrite the URL to load the public viewer.
+  // If the visitor is on a client's custom domain...
+  // 1. Extract the path (e.g., '/', '/about-us')
+  const path = url.pathname;
+  const pageSlug = path === '/' ? 'home' : path.substring(1).replace(/\//g, '');
+
+  // 2. Silently rewrite the URL to load the public viewer, passing the domain AND the page slug
   url.pathname = `/view`;
+  url.searchParams.set('domain', hostname);
+  url.searchParams.set('page', pageSlug);
   
   return NextResponse.rewrite(url);
 }

@@ -5,40 +5,54 @@ import { db } from '@/lib/firebase/client';
 import { doc, getDoc } from 'firebase/firestore';
 import { PublicNodeRenderer } from '@/components/renderers/PublicNodeRenderer';
 import { Node } from '@/types';
+import { useSearchParams } from 'next/navigation';
 
 export default function PublicDomainPage() {
+  const searchParams = useSearchParams();
+  const domain = searchParams.get('domain');
+  const pageId = searchParams.get('page') || 'home';
+  
   const [nodes, setNodes] = useState<Node[] | null>(null);
   const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
-    const hostname = window.location.hostname;
-    
+    if (!domain) {
+      setNodes([]);
+      return;
+    }
+
     const fetchSite = async () => {
       try {
-        const domainDoc = await getDoc(doc(db, 'domains', hostname));
+        // 1. Look up the domain in the public 'domains' collection
+        const domainDoc = await getDoc(doc(db, 'domains', domain));
         
         if (domainDoc.exists()) {
           const siteId = domainDoc.data().siteId;
-          const siteDoc = await getDoc(doc(db, 'sites', siteId));
           
+          // 2. Fetch the actual website document
+          const siteDoc = await getDoc(doc(db, 'sites', siteId));
           if (siteDoc.exists()) {
+            // 3. Check if site is paused
             if (siteDoc.data().status === 'paused') {
               setIsPaused(true);
               setNodes([]);
               return;
             }
-            setNodes(siteDoc.data()?.pageData || []);
+
+            // 4. Determine which page data to load (home vs about-us)
+            const pageKey = pageId === 'home' ? 'pageData' : `pageData_${pageId}`;
+            setNodes(siteDoc.data()?.[pageKey] || []);
             return;
           }
         }
-        setNodes([]); 
+        setNodes([]); // Not found
       } catch (error) {
         console.error("Domain routing error:", error);
         setNodes([]);
       }
     };
     fetchSite();
-  }, []);
+  }, [domain, pageId]);
 
   if (isPaused) {
     return (
@@ -57,8 +71,6 @@ export default function PublicDomainPage() {
     );
   }
 
-  // ... keep your existing loading and empty states below this ...
-
   if (nodes === null) {
     return <div className="h-screen flex items-center justify-center bg-white text-neutral-400">Loading site...</div>;
   }
@@ -67,7 +79,7 @@ export default function PublicDomainPage() {
     return <div className="h-screen flex items-center justify-center bg-white text-neutral-400">Site not published yet.</div>;
   }
 
-   return (
+  return (
     <div className="min-h-screen bg-white flex flex-col">
       <div className="flex-1">
         {nodes.map(node => <PublicNodeRenderer key={node.id} node={node} />)}
