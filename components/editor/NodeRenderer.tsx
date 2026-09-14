@@ -23,12 +23,13 @@ export function NodeRenderer({ node }: { node: Node }) {
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLParagraphElement>) => {
-    if (node.props.text !== e.target.innerText) {
+    if (node.props?.text !== e.target.innerText) {
       updateComponentProps(node.id, { text: e.target.innerText });
     }
   };
 
-  const currentStyles = node.props.styles || {};
+  // Safe fallbacks for AI generated data
+  const currentStyles = node.props?.styles || {};
   const dragTransform = transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined;
   const style = dragTransform ? { transform: dragTransform } : {};
 
@@ -89,7 +90,7 @@ export function NodeRenderer({ node }: { node: Node }) {
         </div>
       )}
 
-      {/* Element Rendering - Strictly applying styles without interfering wrappers */}
+      {/* Element Rendering - Safe checks for props */}
       {node.type === 'Text' && (
         <p
           contentEditable
@@ -98,7 +99,7 @@ export function NodeRenderer({ node }: { node: Node }) {
           className="outline-none w-full"
           style={{ margin: 0, padding: 0, ...currentStyles }}
         >
-          {node.props.text}
+          {node.props?.text || 'Empty Text'}
         </p>
       )}
 
@@ -107,17 +108,24 @@ export function NodeRenderer({ node }: { node: Node }) {
           className="rounded-md transition-colors pointer-events-none"
           style={{ border: 'none', cursor: 'pointer', ...currentStyles }}
         >
-          {node.props.text}
+          {node.props?.text || 'Button'}
         </button>
       )}
 
-            {node.type === 'Image' && (
-        <img src={node.props.src} alt="Uploaded" className="w-full h-auto rounded-md object-cover" style={currentStyles} />
+      {node.type === 'Image' && (
+        <img 
+          src={node.props?.src} 
+          alt="Uploaded" 
+          className="w-full h-auto rounded-md object-cover" 
+          style={currentStyles} 
+        />
       )}
 
-            {node.type === 'Video' && (
+      {node.type === 'Video' && (
         <div style={currentStyles} className="bg-neutral-100 flex items-center justify-center rounded-md overflow-hidden">
-          <iframe src={node.props.src} className="w-full h-full" allowFullScreen></iframe>
+          {node.props?.src ? (
+            <iframe src={node.props.src} className="w-full h-full" allowFullScreen></iframe>
+          ) : <span className="text-neutral-400 text-sm p-4">Video Source Missing</span>}
         </div>
       )}
 
@@ -133,37 +141,36 @@ export function NodeRenderer({ node }: { node: Node }) {
 
       {node.type === 'Icon' && (
         <div style={currentStyles} className="flex items-center justify-center w-full">
-          {node.props.text}
+          {node.props?.text || '⭐'}
         </div>
       )}
 
-
       {node.type === 'Link' && (
-        <a href={node.props.href} onClick={(e) => e.preventDefault()} style={currentStyles} className="pointer-events-none">
-          {node.props.text}
+        <a href={node.props?.href || '#'} onClick={(e) => e.preventDefault()} style={currentStyles} className="pointer-events-none">
+          {node.props?.text || 'Link'}
         </a>
       )}
 
       {node.type === 'Form' && (
         <div style={currentStyles} className="w-full pointer-events-none">
-          <input type="text" placeholder="Name" className="w-full p-2 border border-neutral-300 rounded" />
-          <input type="email" placeholder="Email" className="w-full p-2 border border-neutral-300 rounded" />
-          <button className="bg-blue-600 text-white p-2 rounded font-medium">Submit</button>
+          <input type="text" placeholder="Name" className="w-full p-2 border border-neutral-300 rounded mb-2" />
+          <input type="email" placeholder="Email" className="w-full p-2 border border-neutral-300 rounded mb-2" />
+          <button className="bg-blue-600 text-white p-2 rounded font-medium w-full">Submit</button>
         </div>
       )}
 
-      
       {node.type === 'Container' && (
         <div 
           className="w-full"
           style={{ boxSizing: 'border-box', ...currentStyles }}
         >
-          {node.children?.length === 0 ? (
+          {Array.isArray(node.children) && node.children.length === 0 ? (
             <div className="w-full h-full min-h-[50px] flex items-center justify-center text-neutral-300 text-sm border border-dashed border-neutral-200 rounded-md">
               Empty Container
             </div>
           ) : (
-            node.children?.map((child: Node) => <NodeRenderer key={child.id} node={child} />)
+            // Recursively render children, ensuring it's an array
+            Array.isArray(node.children) && node.children.map((child: Node) => <NodeRenderer key={child.id} node={child} />)
           )}
         </div>
       )}
