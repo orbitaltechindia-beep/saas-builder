@@ -172,55 +172,59 @@ export default function ClientDashboard() {
 
   const handleGenerateAI = async () => {
     if (!aiPrompt || !user) return;
+
+    // 1. Check Quota Client-Side
+    if (aiLimits.websites >= aiLimits.websiteLimit) {
+      alert(`Daily limit reached (${aiLimits.websites}/${aiLimits.websiteLimit}). Try again tomorrow.`);
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const res = await fetch('/api/generate-ai-site', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: aiPrompt, modules: selectedModules, userId: user.uid })
+        body: JSON.stringify({ prompt: aiPrompt, modules: selectedModules })
       });
       const data = await res.json();
       
-      if (res.status === 429) {
-        alert(data.error);
+      if (!data.success) {
+        alert("AI generation failed: " + (data.details || "Try a different prompt."));
         setIsGenerating(false);
         return;
       }
       
-      if (data.success) {
-        const newSiteId = `site-${Date.now()}`;
-        const aiTitle = aiPrompt.substring(0, 20) + (aiPrompt.length > 20 ? "..." : "") + " (AI)";
-        
-        const corePages = [
-          { id: 'home', name: 'Home' },
-          { id: 'resources', name: 'Free Resources' },
-          { id: 'tests', name: 'Tests' },
-          { id: 'notifications', name: 'Notifications' }
-        ];
+      const newSiteId = `site-${Date.now()}`;
+      const aiTitle = aiPrompt.substring(0, 20) + (aiPrompt.length > 20 ? "..." : "") + " (AI)";
+      
+      const corePages = [
+        { id: 'home', name: 'Home' },
+        { id: 'resources', name: 'Free Resources' },
+        { id: 'tests', name: 'Tests' },
+        { id: 'notifications', name: 'Notifications' }
+      ];
 
-        await setDoc(doc(db, 'sites', newSiteId), { 
-          pageData: data.nodes, 
-          title: aiTitle,
-          status: 'live', 
-          pages: corePages,
-          pageData_resources: [],
-          pageData_tests: [],
-          pageData_notifications: [],
-          updatedAt: new Date() 
-        });
-        
-        // Increment local quota UI
-        setAiLimits(prev => ({ ...prev, websites: prev.websites + 1 }));
+      await setDoc(doc(db, 'sites', newSiteId), { 
+        pageData: data.nodes, title: aiTitle, status: 'live', 
+        pages: corePages, pageData_resources: [], pageData_tests: [], pageData_notifications: [],
+        updatedAt: new Date() 
+      });
+      
+      // 2. Increment Quota in Firestore
+      await updateDoc(doc(db, 'users', user.uid), {
+        aiWebsitesUsed: aiLimits.websites + 1,
+        lastAiReset: new Date()
+      });
 
-        const newSite = { id: newSiteId, name: aiTitle, template: 'ai-generated', status: 'live' };
-        const updatedSites = [...sites, newSite];
-        setSites(updatedSites);
-        localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
-        
-        router.push(`/editor/${newSiteId}/home`);
-      } else {
-        alert("AI generation failed. Try a different prompt.");
-      }
+      // Update local UI
+      setAiLimits(prev => ({ ...prev, websites: prev.websites + 1 }));
+
+      const newSite = { id: newSiteId, name: aiTitle, template: 'ai-generated', status: 'live' };
+      const updatedSites = [...sites, newSite];
+      setSites(updatedSites);
+      localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
+      
+      router.push(`/editor/${newSiteId}/home`);
     } catch (error) {
       alert("Error connecting to AI.");
     }

@@ -43,6 +43,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   // AI Followup State
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiEditing, setIsAiEditing] = useState(false);
+  const [aiLimits, setAiLimits] = useState({ followups: 0, followupLimit: 12 });
 
   // 1. Mount & Auth State
   useEffect(() => {
@@ -50,7 +51,20 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) setUserRole(userDoc.data().role || 'admin');
+        if (userDoc.exists()) {
+          setUserRole(userDoc.data().role || 'admin');
+          
+          // Fetch AI Limits
+          const data = userDoc.data();
+          const today = new Date().toDateString();
+          const lastReset = data.lastAiReset?.toDate().toDateString();
+          const isSameDay = today === lastReset;
+          
+          setAiLimits({
+            followups: isSameDay ? (data.aiFollowupsUsed || 0) : 0,
+            followupLimit: data.aiFollowupLimit || 12
+          });
+        }
       }
     });
     return () => unsub();
@@ -237,23 +251,40 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
     }
   };
 
-  // 8. AI Followup Edit
+  // 8. AI Followup Edit (Client-Side Quota)
   const handleAiEdit = async () => {
     if (!aiPrompt) return;
+
+    // 1. Check Quota Client-Side
+    if (aiLimits.followups >= aiLimits.followupLimit) {
+      alert(`Daily edit limit reached (${aiLimits.followups}/${aiLimits.followupLimit}). Try again tomorrow.`);
+      return;
+    }
+
     setIsAiEditing(true);
     try {
-            const res = await fetch('/api/edit-with-ai', {
+      const res = await fetch('/api/edit-with-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: aiPrompt, currentNodes: nodes, userId: auth.currentUser?.uid })
+        body: JSON.stringify({ prompt: aiPrompt, currentNodes: nodes })
       });
       const data = await res.json();
       if (data.success) {
         setNodes(data.nodes);
         setAiPrompt('');
+        
+        // 2. Increment Quota in Firestore
+        if (auth.currentUser) {
+          await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+            aiFollowupsUsed: aiLimits.followups + 1,
+            lastAiReset: new Date()
+          });
+          setAiLimits(prev => ({ ...prev, followups: prev.followups + 1 }));
+        }
+        
         alert("AI updated your website!");
       } else {
-        alert("AI failed to edit. Try a different prompt.");
+        alert("AI failed to edit: " + (data.details || "Try a different prompt."));
       }
     } catch (error) {
       alert("Error connecting to AI.");
@@ -361,10 +392,13 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
           placeholder="e.g., Make the hero darker, or add a pricing section..."
           className="w-full bg-neutral-800 text-white text-xs p-2 rounded border border-neutral-700 outline-none focus:border-blue-500 resize-none h-20"
         />
+        <div className="text-[10px] text-neutral-500 mt-1 mb-2 text-right">
+          Edits used today: {aiLimits.followups}/{aiLimits.followupLimit}
+        </div>
         <button 
           onClick={handleAiEdit} 
           disabled={isAiEditing}
-          className="w-full bg-blue-600 text-white text-xs py-2 rounded mt-2 hover:bg-blue-700 disabled:opacity-50"
+          className="w-full bg-blue-600 text-white text-xs py-2 rounded mt-1 hover:bg-blue-700 disabled:opacity-50"
         >
           {isAiEditing ? 'Modifying...' : 'Update with AI ✨'}
         </button>
