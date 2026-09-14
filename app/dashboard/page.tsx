@@ -159,7 +159,7 @@ export default function ClientDashboard() {
         setSites(updatedSites);
         localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
         
-        router.push(`/editor/${newSiteId}/page-home`);
+        router.push(`/editor/${newSiteId}/home`);
       } else {
         alert("AI generation failed. Try a different prompt.");
       }
