@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// CRITICAL: Use Edge Runtime for 25s timeout instead of 10s
+// Use Edge runtime for 25s timeout
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
@@ -14,14 +14,19 @@ export async function POST(req: Request) {
     if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    // Updated to the model Google explicitly requested
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
 
-    const result = await model.generateContent([
+    // CRITICAL: Use streaming to prevent Vercel timeout
+    const result = await model.generateContentStream([
       { text: systemPrompt },
       { text: `Current Nodes: \n${JSON.stringify(currentNodes)}\n\nInstruction: ${prompt}` }
     ]);
 
-    let content = result.response.text();
+    let content = '';
+    for await (const chunk of result.stream) {
+      content += chunk.text();
+    }
     
     const jsonStart = content.indexOf('[');
     const jsonEnd = content.lastIndexOf(']');
