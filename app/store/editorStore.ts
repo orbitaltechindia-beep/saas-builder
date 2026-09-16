@@ -18,9 +18,8 @@ interface EditorState {
   redo: () => void;
 }
 
-// Helper to push current state to history
 const pushHistory = (state: EditorState): Partial<EditorState> => ({
-  past: [...state.past, state.nodes].slice(-50), // Keep max 50 history steps
+  past: [...state.past, state.nodes].slice(-50),
   future: []
 });
 
@@ -66,7 +65,7 @@ const moveInTree = (nodes: Node[], nodeId: string, direction: 'up' | 'down'): No
   return newNodes;
 };
 
-export const useEditorStore = create<EditorState>((set, get) => ({
+export const useEditorStore = create<EditorState>((set) => ({
   nodes: [],
   past: [],
   future: [],

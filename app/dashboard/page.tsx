@@ -189,7 +189,7 @@ export default function ClientDashboard() {
     });
   };
 
-  const handleGenerateAI = async () => {
+   const handleGenerateAI = async () => {
     if (!aiPrompt || !user) return;
 
     if (aiLimits.websites >= aiLimits.websiteLimit) {
@@ -204,10 +204,18 @@ export default function ClientDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: aiPrompt, modules: selectedModules })
       });
-      const data = await res.json();
+
+      // Safe JSON parsing (in case Vercel returns an HTML error page)
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        if (res.status === 504) throw new Error("The AI took too long to respond. Please try again.");
+        throw new Error("Server returned an invalid response. Check Vercel logs.");
+      }
       
-      if (!data.success) {
-        alert("AI generation failed: " + (data.details || "Try a different prompt."));
+      if (!res.ok || !data.success) {
+        alert("AI generation failed: " + (data.details || data.error || "Try a different prompt."));
         setIsGenerating(false);
         return;
       }
@@ -243,8 +251,8 @@ export default function ClientDashboard() {
       localStorage.setItem(`saas_sites_${user.uid}`, JSON.stringify(updatedSites));
       
       router.push(`/editor/${newSiteId}/home`);
-    } catch (error) {
-      alert("Error connecting to AI.");
+    } catch (error: any) {
+      alert("Error: " + error.message);
     }
     setIsGenerating(false);
   };

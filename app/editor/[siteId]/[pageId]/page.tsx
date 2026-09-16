@@ -268,7 +268,7 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
   };
 
   // 8. AI Followup Edit (Client-Side Quota & Crash Protection)
-  const handleAiEdit = async () => {
+   const handleAiEdit = async () => {
     if (!aiPrompt) return;
 
     if (aiLimits.followups >= aiLimits.followupLimit) {
@@ -283,7 +283,15 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: aiPrompt, currentNodes: nodes })
       });
-      const data = await res.json();
+
+      // Safe JSON parsing
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        if (res.status === 504) throw new Error("The AI took too long to respond. Please try again.");
+        throw new Error("Server returned an invalid response.");
+      }
       
       if (data.success && Array.isArray(data.nodes)) {
         const cleanNodes = sanitizeNodes(data.nodes);
@@ -302,12 +310,11 @@ export default function EditorPage({ params }: { params: Promise<{ siteId: strin
       } else {
         alert("AI failed to edit: " + (data.details || data.error || "Try a different prompt."));
       }
-    } catch (error) {
-      alert("Error connecting to AI.");
+    } catch (error: any) {
+      alert("Error: " + error.message);
     }
     setIsAiEditing(false);
   };
-
   if (!isMounted) {
     return (
       <div className="flex flex-col h-screen justify-center items-center bg-neutral-900 text-white">
