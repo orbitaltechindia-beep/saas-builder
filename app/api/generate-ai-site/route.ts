@@ -8,10 +8,9 @@ export async function POST(req: Request) {
   const { prompt, modules } = await req.json();
 
   try {
-    const systemPrompt = `You are an elite front-end developer. Output ONLY a valid JSON array of "Node" objects. No markdown.
-    Interface Node { id: string; type: 'Container' | 'Text' | 'Image' | 'Button' | 'Link' | 'Form'; props: { text?: string; href?: string; styles?: React.CSSProperties }; children?: Node[]; }
-    Rules: 1. Premium aesthetics. 2. Inline styles. 3. Unique IDs. 4. Include modules: ${modules.join(', ')}.`;
-
+       const systemPrompt = `You are an elite front-end developer. Output ONLY a JSON array of "Node" objects.
+    Node: { id: string, type: 'Container'|'Text'|'Button'|'Image', props: { text?: string, styles?: React.CSSProperties }, children?: Node[] }
+    Rules: 1. Be concise. 2. Use inline styles. 3. Generate sections: ${modules.join(', ')}. Do NOT add explanations.`;
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
 
