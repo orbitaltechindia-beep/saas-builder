@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// CRITICAL: Use Edge Runtime for 25s timeout instead of 10s
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
-  const { prompt, modules } = await req.json();
+  const { prompt } = await req.json(); // Removed modules to speed up response
 
   try {
-       const systemPrompt = `You are an elite front-end developer. Output ONLY a JSON array of "Node" objects.
-    Node: { id: string, type: 'Container'|'Text'|'Button'|'Image', props: { text?: string, styles?: React.CSSProperties }, children?: Node[] }
-    Rules: 1. Be concise. 2. Use inline styles. 3. Generate sections: ${modules.join(', ')}. Do NOT add explanations.`;
+    // Drastically reduced prompt for speed (under 5 seconds response time)
+    const systemPrompt = `Output ONLY a JSON array of Node objects.
+    Node: { id: string, type: 'Container'|'Text'|'Button', props: { text?: string, styles?: React.CSSProperties }, children?: Node[] }
+    Rules: Be fast. Be concise. Generate a dark-mode Hero section and a simple CTA section based on the user's prompt. Use inline styles.`;
+
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
 
